@@ -8,7 +8,7 @@
 |---------|------|-----------|
 | Frontend | Flutter | 3.x (最新安定版) |
 | 状態管理 | Riverpod | 2.x |
-| ローカルDB | Isar | 3.x |
+| ローカルDB | ObjectBox | 5.x |
 | 音声認識 | Apple Speech Framework (SFSpeechRecognizer) | iOS 16+ |
 | 認証 | Firebase Authentication | - |
 | クラウドDB | Cloud Firestore | - |
@@ -68,9 +68,9 @@ lib/
 #### AppSettings
 
 ```dart
-@collection
+@Entity()
 class AppSettings {
-  Id id = Isar.autoIncrement; // 設定は1レコードのみ
+  int id = 0; // ObjectBoxではIDはint型、初期値0で自動採番
 
   double fontSize;       // 1.0(大/24pt), 2.0(特大/32pt), 3.0(最大/48pt)
 
@@ -86,11 +86,12 @@ class AppSettings {
 #### Conversation
 
 ```dart
-@collection
+@Entity()
 class Conversation {
-  Id id = Isar.autoIncrement;
+  int id = 0;
 
-  @Index(unique: true, replace: true)
+  @Index()
+  @Unique()
   String uuid;           // UUID v4 (外部連携用)
 
   @Index()
@@ -109,11 +110,12 @@ class Conversation {
 #### Message
 
 ```dart
-@collection
+@Entity()
 class Message {
-  Id id = Isar.autoIncrement;
+  int id = 0;
 
-  @Index(unique: true, replace: true)
+  @Index()
+  @Unique()
   String uuid;           // UUID v4 (外部連携用)
 
   @Index()
@@ -156,13 +158,13 @@ users/
             - isFinal: Boolean
 ```
 
-### 2.3 Isar Collection 構成
+### 2.3 ObjectBox Box 構成
 
-| Collection名 | クラス | 用途 |
+| Box名 | クラス | 用途 |
 |-------|-----|------|
-| `AppSettings` | `AppSettings` | アプリ設定（1レコード） |
-| `Conversation` | `Conversation` | 会話一覧 |
-| `Message` | `Message` | 全メッセージ |
+| `Box<AppSettings>` | `AppSettings` | アプリ設定（1レコード） |
+| `Box<Conversation>` | `Conversation` | 会話一覧 |
+| `Box<Message>` | `Message` | 全メッセージ |
 
 ---
 
@@ -178,7 +180,7 @@ users/
 3. マイク権限チェック
    - 未許可 → 権限リクエストダイアログ表示
    - 拒否済み → 設定誘導画面へ遷移
-4. Isar初期化・設定読み込み
+4. ObjectBox初期化・設定読み込み
 5. Home Screen へ遷移
 
 **画面レイアウト**:
@@ -368,7 +370,7 @@ users/
 **文字サイズスライダー**:
 - 3段階の離散値: 大(1.0) / 特大(2.0) / 最大(3.0)
 - スライダー操作時にプレビューテキストがリアルタイムで変化
-- 値変更は即座にIsarに保存、UIに即反映
+- 値変更は即座にObjectBoxに保存、UIに即反映
 
 **コントラスト切替**:
 - ラジオボタン形式（2択）
@@ -466,11 +468,14 @@ class AuthService {
 
 ### 4.3 LocalStorageService
 
-**責務**: Isar を使ったローカルデータの永続化
+**責務**: ObjectBox を使ったローカルデータの永続化
 
 ```dart
 class LocalStorageService {
-  late Isar isar;
+  late Store store;
+  late Box<AppSettings> settingsBox;
+  late Box<Conversation> conversationBox;
+  late Box<Message> messageBox;
 
   // 設定
   Future<void> saveSettings(AppSettings settings);
@@ -492,10 +497,10 @@ class LocalStorageService {
 ```dart
 Future<void> initialize() async {
   final dir = await getApplicationDocumentsDirectory();
-  isar = await Isar.open(
-    [AppSettingsSchema, ConversationSchema, MessageSchema],
-    directory: dir.path,
-  );
+  store = await openStore(directory: p.join(dir.path, 'objectbox'));
+  settingsBox = store.box<AppSettings>();
+  conversationBox = store.box<Conversation>();
+  messageBox = store.box<Message>();
 }
 ```
 
@@ -835,10 +840,10 @@ class LargeButton extends StatelessWidget {
 
 | 要件 | 目標値 | 対策 |
 |------|-------|------|
-| 起動速度 | 2秒以内 | Splash画面での並列初期化（Auth + Isar + 権限チェック） |
+| 起動速度 | 2秒以内 | Splash画面での並列初期化（Auth + ObjectBox + 権限チェック） |
 | 発話→表示 | 0.5秒以内 | オンデバイス認識 (`requiresOnDeviceRecognition: true`) |
 | メモリ使用量 | 100MB以下 | ListView.builderによる遅延描画、古いメッセージの段階的解放 |
-| 履歴表示 | 1秒以内 | Isar Collection のインデックス活用、ページング（50件単位） |
+| 履歴表示 | 1秒以内 | ObjectBox Query のインデックス活用、ページング（50件単位） |
 
 ---
 
@@ -849,7 +854,7 @@ class LargeButton extends StatelessWidget {
 | 対象 | 方針 |
 |------|------|
 | 音声データ | デバイス内で処理。永続保存しない（Whisper利用時を除く） |
-| テキストデータ | Isar（暗号化サポート検討）に保存 |
+| テキストデータ | ObjectBox（暗号化サポート検討）に保存 |
 | 通信 | HTTPS のみ（Firebase SDKがデフォルトで対応） |
 | 認証 | Firebase匿名認証。個人情報の入力不要 |
 

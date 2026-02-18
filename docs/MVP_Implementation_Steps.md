@@ -21,21 +21,23 @@
 
 ```yaml
 dependencies:
-  flutter_riverpod: # 状態管理
-  riverpod_annotation: # Riverpod コード生成
-  isar: # ローカルDB
-  isar_flutter_libs: # Isar Flutter統合
-  go_router: # ルーティング
-  firebase_core: # Firebase初期化
-  firebase_auth: # 匿名認証
-  uuid: # ID生成
-  connectivity_plus: # ネットワーク状態検知
-  intl: # 日付フォーマット
+  flutter_riverpod: ^3.2.1 # 状態管理
+  riverpod_annotation: ^4.0.2 # Riverpod コード生成
+  objectbox: ^5.2.0 # ローカルDB
+  objectbox_flutter_libs: ^5.2.0 # ObjectBox Flutter統合
+  path_provider: ^2.1.5 # パス取得
+  go_router: ^17.1.0 # ルーティング
+  firebase_core: ^4.4.0 # Firebase初期化
+  firebase_auth: ^6.1.4 # 匿名認証
+  uuid: ^4.5.2 # ID生成
+  connectivity_plus: ^7.0.0 # ネットワーク状態検知
+  intl: ^0.20.2 # 日付フォーマット
 
 dev_dependencies:
-  build_runner:
-  riverpod_generator:
-  isar_generator: # Isar コード生成
+  build_runner: ^2.11.1
+  riverpod_generator: ^4.0.3
+  objectbox_generator: ^5.2.0 # ObjectBox コード生成
+  flutter_lints: ^6.0.0
 ```
 
 ### 1.3 ディレクトリ構成の作成
@@ -67,28 +69,28 @@ lib/
 
 ## Step 2: データモデルとローカルストレージ
 
-### 2.1 Isar モデル定義
+### 2.1 ObjectBox Entity 定義
 
-以下の3つのモデルクラスを作成し、`build_runner` でスキーマを生成する。
+以下の3つのモデルクラスを作成し、`build_runner` でコードを生成する。
 
 | ファイル | クラス |
 |---------|--------|
-| `models/app_settings.dart` | `AppSettings` |
-| `models/conversation.dart` | `Conversation` |
-| `models/message.dart` | `Message` |
+| `models/app_settings.dart` | `AppSettings` (`@Entity`) |
+| `models/conversation.dart` | `Conversation` (`@Entity`) |
+| `models/message.dart` | `Message` (`@Entity`) |
 
-各モデルのフィールドは詳細設計書 §2.1 に準拠する。
+各モデルのフィールドは詳細設計書 §2.1 に準拠する（`int id = 0;` を含む）。
 
 ### 2.2 LocalStorageService 実装
 
 `services/local_storage_service.dart` に以下を実装する。
 
-- `initialize()`: Isar初期化、スキーマ登録、インスタンスオープン
+- `initialize()`: ObjectBox初期化 (`openStore()`)
 - `saveSettings()` / `loadSettings()`: 設定の保存・読み込み
 - `saveConversation()` / `getAllConversations()` / `deleteConversation()`: 会話CRUD
 - `addMessage()` / `getMessages()` / `deleteMessages()`: メッセージCRUD
-- `getAllConversations()` は日付降順で返す
-- 各書き込み操作は `isar.writeTxn()` 内で行う
+- `getAllConversations()` は日付降順で返す（Queryを使用）
+- 各書き込み操作は `store.runInTransaction()` または同期メソッドで行う
 
 ### 2.3 単体テスト
 
@@ -137,9 +139,9 @@ lib/
 
 `providers/settings_provider.dart` に Riverpod Notifier を実装する。
 
-- `build()`: Isar から設定を読み込んで初期状態を返す
-- `updateFontSize(double scale)`: フォントサイズ変更 → Isar 保存
-- `toggleHighContrast(bool enabled)`: コントラスト切替 → Isar 保存
+- `build()`: ObjectBox から設定を読み込んで初期状態を返す
+- `updateFontSize(double scale)`: フォントサイズ変更 → ObjectBox 保存
+- `toggleHighContrast(bool enabled)`: コントラスト切替 → ObjectBox 保存
 
 ### 4.2 Settings Screen
 
@@ -149,7 +151,7 @@ lib/
 - プレビューテキスト（スライダー操作でリアルタイム変化）
 - コントラスト切替（ラジオボタン2択）
 - 戻るボタン（64x64pt 以上）
-- 変更は即座に Isar 保存、UI に即反映
+- 変更は即座に ObjectBox 保存、UI に即反映
 
 ### 4.3 app.dart へのテーマ統合
 
@@ -180,7 +182,7 @@ lib/
 1. ロゴ表示（中央配置）
 2. 並列で初期化実行:
    - Firebase 匿名認証
-   - Isar 初期化・設定読み込み
+   - ObjectBox 初期化・設定読み込み
    - マイク権限チェック
 3. 権限未許可 → リクエストダイアログ、拒否済み → 設定誘導
 4. 全初期化完了後、Home Screen へ自動遷移（最大3秒タイムアウト）
