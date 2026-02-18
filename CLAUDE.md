@@ -41,7 +41,7 @@ Uses `flutter_riverpod` with code generation (`riverpod_annotation` + `riverpod_
 Anonymous Firebase Auth only — no user registration. The same UID persists across restarts.
 
 ### Routing
-`go_router` ^17.1.0 is included but not yet configured. Routes should be defined in `lib/config/`.
+`go_router` ^17.1.0 configured in `lib/config/routes.dart`. Routes: `/splash`, `/`, `/history`, `/history/:id`, `/settings`.
 
 ### Core Entities
 - **AppSettings** — singleton (id=1); `fontSize` (1.0/2.0/3.0 mapped to 24/32/48pt), `isHighContrast`
@@ -57,9 +57,39 @@ Planned to use native iOS `SFSpeechRecognizer` framework (on-device, no cloud). 
 - **Offline-first**: All features must work without network. Cloud sync is optional.
 - **iOS only**: No Android or web targets.
 
+### Provider 命名規則（Riverpod 3.x）
+`@riverpod class FooNotifier` からコード生成されるプロバイダ名は `fooProvider`（`Notifier` サフィックスが除去される）。
+例: `SettingsNotifier` → `settingsProvider`、`settingsProvider.notifier` でメソッド呼び出し。
+
+### LocalStorageService の初期化
+`LocalStorageService` は起動時に非同期初期化が必要。`main.dart` で `await service.initialize()` を呼び出し、`ProviderScope` の `overrides` で `localStorageServiceProvider.overrideWithValue(service)` として注入する。
+
+### AsyncValue のアンラップ（Riverpod 3.x）
+`valueOrNull` は廃止。Dart 3.x パターンマッチングを使用する:
+```dart
+final value = switch (asyncValue) {
+  AsyncData(:final value) => value,
+  _ => defaultValue,
+};
+```
+
+## Implementation Progress
+
+| Step | 内容 | 状態 |
+|------|------|------|
+| Step 1 | プロジェクトセットアップ・Firebase・依存パッケージ | ✅ 完了 |
+| Step 2 | データモデル・ObjectBox ストレージ | ✅ 完了 |
+| Step 3 | テーマ・UI基盤・共通 Widget | ✅ 完了 |
+| Step 4 | 設定機能（SettingsProvider・Settings Screen） | ✅ 完了 |
+| Step 5 | Firebase 匿名認証・Splash Screen | ⏳ 未実装 |
+| Step 6 | 音声認識（SFSpeechRecognizer・Platform Channel） | ⏳ 未実装 |
+| Step 7 | Home Screen（リアルタイム文字起こし表示） | ⏳ 未実装 |
+| Step 8 | 履歴機能（History Screen・削除） | ⏳ 未実装 |
+| Step 9 | 結合テスト・品質確認 | ⏳ 未実装 |
+
 ## Documentation
 
 Design documents in `docs/`:
 - `RDD.md` — functional requirements
 - `DetailedDesign.md` — full technical design (directory structure, Riverpod provider specs, widget specs, Firestore schema)
-- `MVP_Implementation_Steps.md` — phased implementation roadmap (Steps 1–2 complete; Steps 3–5 pending)
+- `MVP_Implementation_Steps.md` — phased implementation roadmap
