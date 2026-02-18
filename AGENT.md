@@ -1,1 +1,0 @@
-cd "/Users/goodapple/workspace/Speech to text" && ~/flutter/bin/flutter create . --org com.example --project-name earsmile --platforms ios --description "聴覚障害・難聴の高齢者向け音声テキスト化アプリ" 2>&1
