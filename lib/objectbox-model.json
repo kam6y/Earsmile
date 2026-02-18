@@ -1,0 +1,140 @@
+{
+  "_note1": "KEEP THIS FILE! Check it into a version control system (VCS) like git.",
+  "_note2": "ObjectBox manages crucial IDs for your object model. See docs for details.",
+  "_note3": "If you have VCS merge conflicts, you must resolve them according to ObjectBox docs.",
+  "entities": [
+    {
+      "id": "1:7850056176677781307",
+      "lastPropertyId": "3:4967370486353035027",
+      "name": "AppSettings",
+      "properties": [
+        {
+          "id": "1:5495975526664060416",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:1169068320434970109",
+          "name": "fontSize",
+          "type": 8
+        },
+        {
+          "id": "3:4967370486353035027",
+          "name": "isHighContrast",
+          "type": 1
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "2:6741828154858768197",
+      "lastPropertyId": "7:3163312255999005973",
+      "name": "Conversation",
+      "properties": [
+        {
+          "id": "1:1594886700761233819",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:6462489653068323967",
+          "name": "uuid",
+          "indexId": "1:2099036530929294395",
+          "type": 9,
+          "flags": 2080
+        },
+        {
+          "id": "3:8531389249446460809",
+          "name": "startedAt",
+          "indexId": "2:2518682059330772208",
+          "type": 10,
+          "flags": 8
+        },
+        {
+          "id": "4:4459786182007179107",
+          "name": "endedAt",
+          "type": 10
+        },
+        {
+          "id": "5:2529607417815776252",
+          "name": "title",
+          "type": 9
+        },
+        {
+          "id": "6:6931173290829098972",
+          "name": "isFavorite",
+          "type": 1
+        },
+        {
+          "id": "7:3163312255999005973",
+          "name": "isSyncedToCloud",
+          "type": 1
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "3:8310160554013422074",
+      "lastPropertyId": "7:5471605041641322173",
+      "name": "Message",
+      "properties": [
+        {
+          "id": "1:5725509081333054952",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:8161298042236708059",
+          "name": "uuid",
+          "indexId": "3:6242334623807565067",
+          "type": 9,
+          "flags": 2080
+        },
+        {
+          "id": "3:355724175885039124",
+          "name": "conversationId",
+          "indexId": "4:3968840274249412",
+          "type": 9,
+          "flags": 2048
+        },
+        {
+          "id": "4:7891273678579613600",
+          "name": "timestamp",
+          "indexId": "5:6444550269682103634",
+          "type": 10,
+          "flags": 8
+        },
+        {
+          "id": "5:5171578378597867025",
+          "name": "text",
+          "type": 9
+        },
+        {
+          "id": "6:6217982716190542774",
+          "name": "confidence",
+          "type": 8
+        },
+        {
+          "id": "7:5471605041641322173",
+          "name": "isFinal",
+          "type": 1
+        }
+      ],
+      "relations": []
+    }
+  ],
+  "lastEntityId": "3:8310160554013422074",
+  "lastIndexId": "5:6444550269682103634",
+  "lastRelationId": "0:0",
+  "lastSequenceId": "0:0",
+  "modelVersion": 5,
+  "modelVersionParserMinimum": 5,
+  "retiredEntityUids": [],
+  "retiredIndexUids": [],
+  "retiredPropertyUids": [],
+  "retiredRelationUids": [],
+  "version": 1
+}
