@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../config/constants.dart';
 import '../providers/auth_provider.dart';
+import '../providers/speech_provider.dart';
 
 /// スプラッシュ画面
 ///
@@ -54,11 +55,41 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       // オフラインファースト: 認証失敗でもアプリ利用を許可
     }
 
-    // Step 6 で追加予定: マイク権限チェック
-    // final hasMicPermission = await _checkMicrophonePermission();
-    // if (!hasMicPermission) { /* 設定誘導ダイアログ表示 */ }
+    // マイク・音声認識の権限チェック
+    try {
+      final speechService = ref.read(speechServiceProvider);
+      final permissionStatus = await speechService.checkPermission();
+      if (permissionStatus == 'notDetermined') {
+        await speechService.requestPermission();
+      } else if (permissionStatus == 'denied' && mounted) {
+        await _showPermissionDeniedDialog();
+      }
+    } catch (_) {
+      // 権限チェック失敗でもアプリ利用を許可
+    }
 
     _navigateToHome();
+  }
+
+  Future<void> _showPermissionDeniedDialog() async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('マイクの使用が必要です'),
+        content: const Text(
+          'お話しされた内容を文字にするには、マイクの使用を許可してください。\n\n'
+          '「設定」アプリを開いて「earsmile」のマイクを有効にしてください。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('あとで'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _navigateToHome() {

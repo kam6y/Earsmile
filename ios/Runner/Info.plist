@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>お話しされた内容を文字に変換するため、マイクを使用します。音声データはこの端末の中だけで処理され、外部に送信されることはありません。</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>お話しされた内容を文字に変換するため、音声認識機能を使用します。認識処理はこの端末の中だけで行われます。</string>
 </dict>
 </plist>
