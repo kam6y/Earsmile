@@ -8,7 +8,7 @@
 |---------|------|-----------|
 | Frontend | Flutter | 3.x (最新安定版) |
 | 状態管理 | Riverpod | 2.x |
-| ローカルDB | Hive | 2.x |
+| ローカルDB | Isar | 3.x |
 | 音声認識 | Apple Speech Framework (SFSpeechRecognizer) | iOS 16+ |
 | 認証 | Firebase Authentication | - |
 | クラウドDB | Cloud Firestore | - |
@@ -68,12 +68,12 @@ lib/
 #### AppSettings
 
 ```dart
-@HiveType(typeId: 0)
-class AppSettings extends HiveObject {
-  @HiveField(0)
+@collection
+class AppSettings {
+  Id id = Isar.autoIncrement; // 設定は1レコードのみ
+
   double fontSize;       // 1.0(大/24pt), 2.0(特大/32pt), 3.0(最大/48pt)
 
-  @HiveField(1)
   bool isHighContrast;   // true: 黒背景+黄文字, false: 白背景+黒文字
 }
 ```
@@ -86,24 +86,22 @@ class AppSettings extends HiveObject {
 #### Conversation
 
 ```dart
-@HiveType(typeId: 1)
-class Conversation extends HiveObject {
-  @HiveField(0)
-  String id;             // UUID v4
+@collection
+class Conversation {
+  Id id = Isar.autoIncrement;
 
-  @HiveField(1)
+  @Index(unique: true, replace: true)
+  String uuid;           // UUID v4 (外部連携用)
+
+  @Index()
   DateTime startedAt;
 
-  @HiveField(2)
   DateTime? endedAt;
 
-  @HiveField(3)
   String title;          // "YYYY/MM/DD HH:mm の会話"
 
-  @HiveField(4)
   bool isFavorite;
 
-  @HiveField(5)
   bool isSyncedToCloud;  // Firestore同期済みフラグ
 }
 ```
@@ -111,24 +109,23 @@ class Conversation extends HiveObject {
 #### Message
 
 ```dart
-@HiveType(typeId: 2)
-class Message extends HiveObject {
-  @HiveField(0)
-  String id;             // UUID v4
+@collection
+class Message {
+  Id id = Isar.autoIncrement;
 
-  @HiveField(1)
-  String conversationId; // 親ConversationのID
+  @Index(unique: true, replace: true)
+  String uuid;           // UUID v4 (外部連携用)
 
-  @HiveField(2)
+  @Index()
+  String conversationId; // 親ConversationのUUID
+
+  @Index()
   DateTime timestamp;
 
-  @HiveField(3)
   String text;
 
-  @HiveField(4)
   double confidence;     // 0.0 ~ 1.0
 
-  @HiveField(5)
   bool isFinal;          // 確定済みテキストか
 }
 ```
@@ -159,13 +156,13 @@ users/
             - isFinal: Boolean
 ```
 
-### 2.3 Hive Box 構成
+### 2.3 Isar Collection 構成
 
-| Box名 | 型 | 用途 |
+| Collection名 | クラス | 用途 |
 |-------|-----|------|
-| `settings` | `AppSettings` | アプリ設定（1レコード） |
-| `conversations` | `Conversation` | 会話一覧 |
-| `messages` | `Message` | 全メッセージ |
+| `AppSettings` | `AppSettings` | アプリ設定（1レコード） |
+| `Conversation` | `Conversation` | 会話一覧 |
+| `Message` | `Message` | 全メッセージ |
 
 ---
 
@@ -181,7 +178,7 @@ users/
 3. マイク権限チェック
    - 未許可 → 権限リクエストダイアログ表示
    - 拒否済み → 設定誘導画面へ遷移
-4. Hive初期化・設定読み込み
+4. Isar初期化・設定読み込み
 5. Home Screen へ遷移
 
 **画面レイアウト**:
@@ -371,7 +368,7 @@ users/
 **文字サイズスライダー**:
 - 3段階の離散値: 大(1.0) / 特大(2.0) / 最大(3.0)
 - スライダー操作時にプレビューテキストがリアルタイムで変化
-- 値変更は即座にHiveに保存、UIに即反映
+- 値変更は即座にIsarに保存、UIに即反映
 
 **コントラスト切替**:
 - ラジオボタン形式（2択）
@@ -469,18 +466,20 @@ class AuthService {
 
 ### 4.3 LocalStorageService
 
-**責務**: Hive を使ったローカルデータの永続化
+**責務**: Isar を使ったローカルデータの永続化
 
 ```dart
 class LocalStorageService {
+  late Isar isar;
+
   // 設定
   Future<void> saveSettings(AppSettings settings);
-  AppSettings loadSettings();
+  Future<AppSettings> loadSettings();
 
   // 会話
   Future<void> saveConversation(Conversation conversation);
   Future<List<Conversation>> getAllConversations(); // 日付降順
-  Future<void> deleteConversation(String conversationId);
+  Future<void> deleteConversation(String uuid);
 
   // メッセージ
   Future<void> addMessage(Message message);
@@ -492,13 +491,11 @@ class LocalStorageService {
 **初期化処理**:
 ```dart
 Future<void> initialize() async {
-  await Hive.initFlutter();
-  Hive.registerAdapter(AppSettingsAdapter());
-  Hive.registerAdapter(ConversationAdapter());
-  Hive.registerAdapter(MessageAdapter());
-  await Hive.openBox<AppSettings>('settings');
-  await Hive.openBox<Conversation>('conversations');
-  await Hive.openBox<Message>('messages');
+  final dir = await getApplicationDocumentsDirectory();
+  isar = await Isar.open(
+    [AppSettingsSchema, ConversationSchema, MessageSchema],
+    directory: dir.path,
+  );
 }
 ```
 
@@ -518,7 +515,7 @@ class FirestoreService {
         .collection('users')
         .doc(userId)
         .collection('conversations')
-        .doc(conversation.id);
+        .doc(conversation.uuid);
 
     final batch = FirebaseFirestore.instance.batch();
 
@@ -530,7 +527,7 @@ class FirestoreService {
     });
 
     for (final msg in messages) {
-      final msgRef = convRef.collection('messages').doc(msg.id);
+      final msgRef = convRef.collection('messages').doc(msg.uuid);
       batch.set(msgRef, {
         'timestamp': msg.timestamp,
         'text': msg.text,
@@ -587,7 +584,7 @@ class SpeechNotifier extends _$SpeechNotifier {
       },
       onFinalResult: (text, confidence) {
         final message = Message(
-          id: uuid.v4(),
+          uuid: uuid.v4(),
           conversationId: _currentConversationId,
           timestamp: DateTime.now(),
           text: text,
@@ -633,7 +630,8 @@ class ConversationNotifier extends _$ConversationNotifier {
   /// 新規会話を開始
   Future<Conversation> startNewConversation() async {
     final conv = Conversation(
-      id: uuid.v4(),
+    final conv = Conversation(
+      uuid: uuid.v4(),
       startedAt: DateTime.now(),
       title: DateFormat('yyyy/MM/dd HH:mm').format(DateTime.now()) + ' の会話',
       isFavorite: false,
@@ -837,10 +835,10 @@ class LargeButton extends StatelessWidget {
 
 | 要件 | 目標値 | 対策 |
 |------|-------|------|
-| 起動速度 | 2秒以内 | Splash画面での並列初期化（Auth + Hive + 権限チェック） |
+| 起動速度 | 2秒以内 | Splash画面での並列初期化（Auth + Isar + 権限チェック） |
 | 発話→表示 | 0.5秒以内 | オンデバイス認識 (`requiresOnDeviceRecognition: true`) |
 | メモリ使用量 | 100MB以下 | ListView.builderによる遅延描画、古いメッセージの段階的解放 |
-| 履歴表示 | 1秒以内 | Hive Box のインデックス活用、ページング（50件単位） |
+| 履歴表示 | 1秒以内 | Isar Collection のインデックス活用、ページング（50件単位） |
 
 ---
 
@@ -851,7 +849,7 @@ class LargeButton extends StatelessWidget {
 | 対象 | 方針 |
 |------|------|
 | 音声データ | デバイス内で処理。永続保存しない（Whisper利用時を除く） |
-| テキストデータ | Hive（ローカル暗号化Box使用検討）に保存 |
+| テキストデータ | Isar（暗号化サポート検討）に保存 |
 | 通信 | HTTPS のみ（Firebase SDKがデフォルトで対応） |
 | 認証 | Firebase匿名認証。個人情報の入力不要 |
 

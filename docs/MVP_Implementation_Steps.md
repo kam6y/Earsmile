@@ -23,8 +23,8 @@
 dependencies:
   flutter_riverpod: # 状態管理
   riverpod_annotation: # Riverpod コード生成
-  hive: # ローカルDB
-  hive_flutter: # Hive Flutter統合
+  isar: # ローカルDB
+  isar_flutter_libs: # Isar Flutter統合
   go_router: # ルーティング
   firebase_core: # Firebase初期化
   firebase_auth: # 匿名認証
@@ -35,7 +35,7 @@ dependencies:
 dev_dependencies:
   build_runner:
   riverpod_generator:
-  hive_generator:
+  isar_generator: # Isar コード生成
 ```
 
 ### 1.3 ディレクトリ構成の作成
@@ -67,15 +67,15 @@ lib/
 
 ## Step 2: データモデルとローカルストレージ
 
-### 2.1 Hive モデル定義
+### 2.1 Isar モデル定義
 
-以下の3つのモデルクラスを作成し、`build_runner` でアダプターを生成する。
+以下の3つのモデルクラスを作成し、`build_runner` でスキーマを生成する。
 
-| ファイル | クラス | HiveType ID |
-|---------|--------|-------------|
-| `models/app_settings.dart` | `AppSettings` | 0 |
-| `models/conversation.dart` | `Conversation` | 1 |
-| `models/message.dart` | `Message` | 2 |
+| ファイル | クラス |
+|---------|--------|
+| `models/app_settings.dart` | `AppSettings` |
+| `models/conversation.dart` | `Conversation` |
+| `models/message.dart` | `Message` |
 
 各モデルのフィールドは詳細設計書 §2.1 に準拠する。
 
@@ -83,11 +83,12 @@ lib/
 
 `services/local_storage_service.dart` に以下を実装する。
 
-- `initialize()`: Hive初期化、アダプター登録、Box オープン
+- `initialize()`: Isar初期化、スキーマ登録、インスタンスオープン
 - `saveSettings()` / `loadSettings()`: 設定の保存・読み込み
 - `saveConversation()` / `getAllConversations()` / `deleteConversation()`: 会話CRUD
 - `addMessage()` / `getMessages()` / `deleteMessages()`: メッセージCRUD
 - `getAllConversations()` は日付降順で返す
+- 各書き込み操作は `isar.writeTxn()` 内で行う
 
 ### 2.3 単体テスト
 
@@ -136,9 +137,9 @@ lib/
 
 `providers/settings_provider.dart` に Riverpod Notifier を実装する。
 
-- `build()`: Hive から設定を読み込んで初期状態を返す
-- `updateFontSize(double scale)`: フォントサイズ変更 → Hive 保存
-- `toggleHighContrast(bool enabled)`: コントラスト切替 → Hive 保存
+- `build()`: Isar から設定を読み込んで初期状態を返す
+- `updateFontSize(double scale)`: フォントサイズ変更 → Isar 保存
+- `toggleHighContrast(bool enabled)`: コントラスト切替 → Isar 保存
 
 ### 4.2 Settings Screen
 
@@ -148,7 +149,7 @@ lib/
 - プレビューテキスト（スライダー操作でリアルタイム変化）
 - コントラスト切替（ラジオボタン2択）
 - 戻るボタン（64x64pt 以上）
-- 変更は即座に Hive 保存、UI に即反映
+- 変更は即座に Isar 保存、UI に即反映
 
 ### 4.3 app.dart へのテーマ統合
 
@@ -179,7 +180,7 @@ lib/
 1. ロゴ表示（中央配置）
 2. 並列で初期化実行:
    - Firebase 匿名認証
-   - Hive 初期化・設定読み込み
+   - Isar 初期化・設定読み込み
    - マイク権限チェック
 3. 権限未許可 → リクエストダイアログ、拒否済み → 設定誘導
 4. 全初期化完了後、Home Screen へ自動遷移（最大3秒タイムアウト）
