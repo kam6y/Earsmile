@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -16,6 +17,7 @@ void main() async {
 
   final localStorageService = LocalStorageService();
   await localStorageService.initialize();
+  await initializeDateFormatting('ja');
 
   final speechService = SpeechService();
 
