@@ -1,95 +1,54 @@
-# CLAUDE.md
+# Claude Code運用ガイド（司令塔専用）
+Your partner is Japanese, so please speak and report in Japanese.
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.Your partner is Japanese. so you should use Japanese to communicate with him.
+## 位置づけ
+- 実装・仕様の規約は `AGENTS.md` を一次参照とし、Claude は最初に必ず読む。
+- 本書は Claude Code の運用オーケストレーション（設計・委譲・差分確認・レビュー）だけを定義する。
+- 実装仕様を `CLAUDE.md` に重複記載しない。仕様判断は `実装コード` を優先する。
 
-## Project Overview
+## 委譲原則
+- CC(Claude Code)は司令塔（設計・計画）、Codexは実行者（実装・修正・テスト生成・レビュー）とする。
+- コード作成・修正・レビュータスクは codex MCP ツールに自動委譲する。
+- コードの初稿は1つのCodexセッションに実装させる。
+- 5行以内の自明な変更のみ、CC自身が直接対応してよい。
+- codex呼び出し時は `developer-instructions` にタスク固有コンテキストを渡す。
+- コーディング規約の再記載は不要（`AGENTS.md` で定義済み）。
 
-**earsmile** — 聴覚障害・難聴の高齢者向け音声テキスト化アプリ (Speech-to-text app for elderly users with hearing impairment). iOS/iPadOS 16+ only.
+## タスク入力テンプレート
+`developer-instructions` には最低限以下を含める:
+- タスク内容の要約
+- 対象ファイルのパスと役割
+- 設計方針・制約条件
+- 完了条件（完了判定）
 
-## Common Commands
+## Codexパラメータ指針
+最小権限で再現性高く運用するため、タスク種別ごとに以下を使う:
 
-```bash
-# Install dependencies
-~/flutter/bin/ flutter pub get
+| タスク | sandbox | approval-policy |
+|---|---|---|
+| レビュー・調査 | `read-only` | - |
+| 実装・修正 | `workspace-write` | `never` |
+| テスト実行を伴う実装 | `workspace-write` | `never` |
+| 破壊的変更（ファイル削除等） | `danger-full-access` | `never` |
 
-# Run code generators (required after modifying ObjectBox entities or Riverpod providers)
-~/flutter/bin/ flutter pub run build_runner build --delete-conflicting-outputs
+- `cwd` は常にプロジェクトルートを指定する。
+- `model` は指定しない（デフォルトを使用）。
+- `model_reasoning_effort` は基本的に指定しない（デフォルトを使用）。ただしレビュー時のみ"high"。
 
-# Lint
-~/flutter/bin/ flutter analyze
+## 作業プロセス
+1. 調査: Glob/Grep/Readで対象コードと制約を把握する。
+2. 設計: 変更方針を決め、必要時のみユーザー確認を行う。
+3. 委譲: Codexへ具体的な実装タスクを渡す。
+4. 差分確認: `git diff`で変更ファイル・行・スコープ逸脱の有無を確認する。
+5. レビュー: 別のCodexセッション（`read-only`）でレビューする。
+6. 報告: 品質ゲートを満たした状態でユーザーへ報告する。
 
-# Run all tests
-~/flutter/bin/ flutter test
+## 品質ゲート（必須）
+- `flutter analyze` でエラー・警告がゼロであること。
+- レビュー基準は「別Codexレビューで緊急度 high 以上がゼロ」であること。
+- high 以上が出た場合は、`codex-reply`で実装したCodexに修正指示 → 別Codexレビューを繰り返す。
+- 修正時はレビューの妥当性を判断させ、妥当と判断した指摘のみ採用するように指示する。
 
-# Run a single test file
-~/flutter/bin/ flutter test test/models/models_test.dart
-
-# Run on iOS simulator
-~/flutter/bin/ flutter run
-```
-
-## Architecture
-
-### State Management: Riverpod
-Uses `flutter_riverpod` with code generation (`riverpod_annotation` + `riverpod_generator`). Providers live in `lib/providers/`. After defining any new provider with `@riverpod` annotation, run `build_runner` to regenerate `.g.dart` files.
-
-### Data Layer: Two-Tier Storage
-1. **Local (ObjectBox)** — embedded NoSQL database at `{DocumentsDirectory}/objectbox`. Initialized in `LocalStorageService` (`lib/services/local_storage_service.dart`). Models are in `lib/models/` and use `@Entity()` annotations; `lib/objectbox.g.dart` is generated code.
-2. **Cloud (Firebase Firestore)** — optional sync; conversations track sync state via `isSyncedToCloud`. Firebase config is in `lib/firebase_options.dart` (generated) and `ios/Runner/GoogleService-Info.plist`.
-
-### Authentication
-Anonymous Firebase Auth only — no user registration. The same UID persists across restarts.
-
-### Routing
-`go_router` ^17.1.0 configured in `lib/config/routes.dart`. Routes: `/splash`, `/`, `/history`, `/history/:id`, `/settings`.
-
-### Core Entities
-- **AppSettings** — singleton (id=1); `fontSize` (1.0/2.0/3.0 mapped to 24/32/48pt), `isHighContrast`
-- **Conversation** — has a UUID for Firestore sync, `isFavorite`, `isSyncedToCloud`
-- **Message** — belongs to a Conversation via `conversationId` (UUID), stores `text`, `confidence` (0.0–1.0), `isFinal`
-
-### Speech Recognition
-Planned to use native iOS `SFSpeechRecognizer` framework (on-device, no cloud). Implementation is pending; the service should live in `lib/services/`.
-
-## Key Design Constraints
-
-- **Accessibility first**: Minimum font 24pt, touch targets ≥80pt, high-contrast color mode support. All UI decisions must accommodate elderly users.
-- **Offline-first**: All features must work without network. Cloud sync is optional.
-- **iOS only**: No Android or web targets.
-
-### Provider 命名規則（Riverpod 3.x）
-`@riverpod class FooNotifier` からコード生成されるプロバイダ名は `fooProvider`（`Notifier` サフィックスが除去される）。
-例: `SettingsNotifier` → `settingsProvider`、`settingsProvider.notifier` でメソッド呼び出し。
-
-### LocalStorageService の初期化
-`LocalStorageService` は起動時に非同期初期化が必要。`main.dart` で `await service.initialize()` を呼び出し、`ProviderScope` の `overrides` で `localStorageServiceProvider.overrideWithValue(service)` として注入する。
-
-### AsyncValue のアンラップ（Riverpod 3.x）
-`valueOrNull` は廃止。Dart 3.x パターンマッチングを使用する:
-```dart
-final value = switch (asyncValue) {
-  AsyncData(:final value) => value,
-  _ => defaultValue,
-};
-```
-
-## Implementation Progress
-
-| Step | 内容 | 状態 |
-|------|------|------|
-| Step 1 | プロジェクトセットアップ・Firebase・依存パッケージ | ✅ 完了 |
-| Step 2 | データモデル・ObjectBox ストレージ | ✅ 完了 |
-| Step 3 | テーマ・UI基盤・共通 Widget | ✅ 完了 |
-| Step 4 | 設定機能（SettingsProvider・Settings Screen） | ✅ 完了 |
-| Step 5 | Firebase 匿名認証・Splash Screen | ✅ 完了 |
-| Step 6 | 音声認識（SFSpeechRecognizer・Platform Channel） | ✅ 完了 |
-| Step 7 | Home Screen（リアルタイム文字起こし表示） | ✅ 完了 |
-| Step 8 | 履歴機能（History Screen・削除） | ✅ 完了 |
-| Step 9 | 結合テスト・品質確認 | ⏳ 未実装 |
-
-## Documentation
-
-Design documents in `docs/`:
-- `RDD.md` — functional requirements
-- `DetailedDesign.md` — full technical design (directory structure, Riverpod provider specs, widget specs, Firestore schema)
-- `MVP_Implementation_Steps.md` — phased implementation roadmap
+停止条件は次の2つのみ:
+1. 上記ゲートを全てクリアした。
+2. 仕様または制約上解消不能で、ユーザー判断が必要と明確化できた。
