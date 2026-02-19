@@ -35,6 +35,11 @@ This file defines operating instructions for coding agents in this repository.
 ### Authentication
 - Anonymous Firebase Auth only. No user registration. UID persists across restarts.
 
+### Firebase設定ファイル運用
+- `lib/firebase_options.dart` と `ios/Runner/GoogleService-Info.plist` は **リポジトリで管理する**（GitHub へコミット可）。
+- 上記2ファイルはクライアント設定情報であり、アクセス制御は Firebase Security Rules / App Check / Auth 設定で担保する。
+- 以下は **コミット禁止**: Firebase Admin SDK のサービスアカウント鍵（`serviceAccountKey.json` など）、秘密鍵、`.env` に入るシークレット値。
+
 ### Routing
 - `go_router` ^17.1.0 configured in `lib/config/routes.dart`.
 - Routes: `/splash`, `/`, `/history`, `/history/:id`, `/settings`.

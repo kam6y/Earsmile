@@ -14,7 +14,14 @@ import 'large_button.dart';
 /// - 履歴ボタン（64x64pt、グレー）
 /// - 設定ボタン（64x64pt、グレー）
 class ControlPanel extends ConsumerWidget {
-  const ControlPanel({super.key});
+  final Future<void> Function()? onBeforeRouteChange;
+  final Future<void> Function()? onAfterRouteReturn;
+
+  const ControlPanel({
+    super.key,
+    this.onBeforeRouteChange,
+    this.onAfterRouteReturn,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -51,7 +58,19 @@ class ControlPanel extends ConsumerWidget {
             semanticsLabel: AccessibilityLabels.openHistory,
             backgroundColor: Colors.grey.shade600,
             foregroundColor: Colors.white,
-            onPressed: () => context.push(RoutePaths.history),
+            onPressed: () async {
+              final beforeRouteChange = onBeforeRouteChange;
+              if (beforeRouteChange != null) {
+                await beforeRouteChange();
+              }
+              if (!context.mounted) return;
+              await context.push(RoutePaths.history);
+              if (!context.mounted) return;
+              final afterRouteReturn = onAfterRouteReturn;
+              if (afterRouteReturn != null) {
+                await afterRouteReturn();
+              }
+            },
           ),
           // 設定ボタン
           LargeButton(
@@ -59,7 +78,19 @@ class ControlPanel extends ConsumerWidget {
             semanticsLabel: AccessibilityLabels.openSettings,
             backgroundColor: Colors.grey.shade600,
             foregroundColor: Colors.white,
-            onPressed: () => context.push(RoutePaths.settings),
+            onPressed: () async {
+              final beforeRouteChange = onBeforeRouteChange;
+              if (beforeRouteChange != null) {
+                await beforeRouteChange();
+              }
+              if (!context.mounted) return;
+              await context.push(RoutePaths.settings);
+              if (!context.mounted) return;
+              final afterRouteReturn = onAfterRouteReturn;
+              if (afterRouteReturn != null) {
+                await afterRouteReturn();
+              }
+            },
           ),
         ],
       ),

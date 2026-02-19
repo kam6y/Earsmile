@@ -33,24 +33,60 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _initializeConversation() async {
-    if (_initialized) return;
+    if (_initialized || !mounted) return;
     _initialized = true;
+
+    final speechNotifier = ref.read(speechProvider.notifier);
+    speechNotifier.resetDisplayState();
 
     final conversationNotifier = ref.read(conversationProvider.notifier);
     final conversation = conversationNotifier.startNewConversation();
 
-    final speechNotifier = ref.read(speechProvider.notifier);
     speechNotifier.setConversationId(conversation.uuid);
     await speechNotifier.startListening();
+
+    if (!mounted) return;
+    final started = ref.read(speechProvider).status == SpeechStatus.listening;
+    if (!started) {
+      speechNotifier.clearConversationId();
+      conversationNotifier.endConversation();
+      _initialized = false;
+    }
+  }
+
+  Future<void> _closeSessionForNavigation() async {
+    if (!_initialized) return;
+    final speechNotifier = ref.read(speechProvider.notifier);
+    await speechNotifier.stop();
+    speechNotifier.clearConversationId();
+    speechNotifier.resetDisplayState();
+    ref.read(conversationProvider.notifier).endConversation();
+    _initialized = false;
+  }
+
+  void _closeSessionWithoutAwait() {
+    if (!_initialized) return;
+    // stop() は async だが、dispose() 内では await できない。
+    // EventChannel の購読解除とネイティブ側の停止を発火する。
+    final speechNotifier = ref.read(speechProvider.notifier);
+    speechNotifier.stop();
+    speechNotifier.clearConversationId();
+    ref.read(conversationProvider.notifier).endConversation();
+    _initialized = false;
+  }
+
+  @override
+  void dispose() {
+    _closeSessionWithoutAwait();
+    super.dispose();
   }
 
   @override
   void deactivate() {
-    // stop() は async だが、deactivate() 内では await できない。
-    // EventChannel の購読解除とネイティブ側の停止を発火する。
-    ref.read(speechProvider.notifier).stop();
-    // endConversation() は同期化済みのため確実に保存される。
-    ref.read(conversationProvider.notifier).endConversation();
+    // replace/破棄時の取りこぼしを防ぐための保険
+    if (_initialized) {
+      _closeSessionWithoutAwait();
+    }
     super.deactivate();
   }
 
@@ -93,7 +129,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
 
             // 操作パネル
-            const ControlPanel(),
+            ControlPanel(
+              onBeforeRouteChange: _closeSessionForNavigation,
+              onAfterRouteReturn: _initializeConversation,
+            ),
           ],
         ),
       ),

@@ -27,7 +27,16 @@ class SpeechEvent {
   });
 
   factory SpeechEvent.fromMap(Map<dynamic, dynamic> map) {
-    final typeStr = map['type'] as String;
+    final typeValue = map['type'];
+    if (typeValue is! String) {
+      return const SpeechEvent(
+        type: SpeechEventType.error,
+        errorCode: 'INVALID_EVENT_PAYLOAD',
+        errorMessage: 'Event type is missing or invalid',
+      );
+    }
+
+    final typeStr = typeValue;
     switch (typeStr) {
       case 'onPartialResult':
         return SpeechEvent(
@@ -67,8 +76,8 @@ class SpeechService {
   SpeechService({
     MethodChannel? methodChannel,
     EventChannel? eventChannel,
-  })  : _methodChannel = methodChannel ??
-            const MethodChannel('com.app.speech/recognizer'),
+  })  : _methodChannel =
+            methodChannel ?? const MethodChannel('com.app.speech/recognizer'),
         _eventChannel = eventChannel ??
             const EventChannel('com.app.speech/recognizer_events');
 
@@ -97,15 +106,21 @@ class SpeechService {
   ///
   /// 戻り値: "granted" / "denied" / "notDetermined"
   Future<String> checkPermission() async {
-    final result =
-        await _methodChannel.invokeMethod<String>('checkPermission');
+    final result = await _methodChannel.invokeMethod<String>('checkPermission');
     return result ?? 'notDetermined';
   }
 
   /// ネイティブからのイベントストリーム
   Stream<SpeechEvent> get eventStream {
     return _eventChannel.receiveBroadcastStream().map((dynamic event) {
-      return SpeechEvent.fromMap(event as Map<dynamic, dynamic>);
+      if (event is Map<dynamic, dynamic>) {
+        return SpeechEvent.fromMap(event);
+      }
+      return const SpeechEvent(
+        type: SpeechEventType.error,
+        errorCode: 'INVALID_EVENT_PAYLOAD',
+        errorMessage: 'Event payload is not a map',
+      );
     });
   }
 }

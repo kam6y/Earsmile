@@ -1,6 +1,6 @@
+import AVFoundation
 import Flutter
 import Speech
-import AVFoundation
 
 /// Flutter Platform Channel を通じて SFSpeechRecognizer を制御するプラグイン
 ///
@@ -18,8 +18,9 @@ class SpeechRecognizerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
 
     // MARK: - プロパティ
 
-    private let speechRecognizer: SFSpeechRecognizer
+    private let speechLocale = Locale(identifier: "ja-JP")
     private let audioEngine = AVAudioEngine()
+    private var speechRecognizer: SFSpeechRecognizer?
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
     private var eventSink: FlutterEventSink?
@@ -31,11 +32,12 @@ class SpeechRecognizerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
 
     // 認識中フラグ（セッション自動再起動の制御用）
     private var isListening = false
+    private var hasInstalledTap = false
 
     // MARK: - 初期化
 
     override init() {
-        self.speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "ja-JP"))!
+        speechRecognizer = SFSpeechRecognizer(locale: speechLocale)
         super.init()
     }
 
@@ -78,12 +80,12 @@ class SpeechRecognizerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
 
     func onListen(withArguments arguments: Any?,
                   eventSink events: @escaping FlutterEventSink) -> FlutterError? {
-        self.eventSink = events
+        eventSink = events
         return nil
     }
 
     func onCancel(withArguments arguments: Any?) -> FlutterError? {
-        self.eventSink = nil
+        eventSink = nil
         return nil
     }
 
@@ -103,9 +105,7 @@ class SpeechRecognizerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
     }
 
     private func requestPermission(result: @escaping FlutterResult) {
-        SFSpeechRecognizer.requestAuthorization { [weak self] speechStatus in
-            guard let self = self else { return }
-
+        SFSpeechRecognizer.requestAuthorization { speechStatus in
             guard speechStatus == .authorized else {
                 DispatchQueue.main.async { result(false) }
                 return
@@ -120,9 +120,45 @@ class SpeechRecognizerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
     // MARK: - 音声認識制御
 
     private func startListening(result: @escaping FlutterResult) {
+        guard let recognizer = speechRecognizer else {
+            let message = "音声認識が利用できません"
+            sendError(code: "RECOGNIZER_UNAVAILABLE", message: message)
+            result(FlutterError(code: "RECOGNIZER_UNAVAILABLE", message: message, details: nil))
+            return
+        }
+
+        guard recognizer.isAvailable else {
+            let message = "音声認識が一時的に利用できません"
+            sendError(code: "RECOGNIZER_NOT_AVAILABLE", message: message)
+            result(FlutterError(code: "RECOGNIZER_NOT_AVAILABLE", message: message, details: nil))
+            return
+        }
+
+        guard SFSpeechRecognizer.authorizationStatus() == .authorized,
+              AVAudioSession.sharedInstance().recordPermission == .granted else {
+            let message = "マイクまたは音声認識の権限がありません"
+            sendError(code: "PERMISSION_DENIED", message: message)
+            result(FlutterError(code: "PERMISSION_DENIED", message: message, details: nil))
+            return
+        }
+
+        if #available(iOS 13.0, *), !recognizer.supportsOnDeviceRecognition {
+            let message = "この端末ではオンデバイス音声認識を利用できません"
+            sendError(code: "ON_DEVICE_NOT_SUPPORTED", message: message)
+            result(FlutterError(code: "ON_DEVICE_NOT_SUPPORTED", message: message, details: nil))
+            return
+        }
+
         // 既存のセッションがあれば停止
-        if recognitionTask != nil {
+        if recognitionTask != nil || audioEngine.isRunning || hasInstalledTap {
             stopCurrentSession()
+        }
+
+        guard createRecognitionRequest() else {
+            let message = "認識リクエストを作成できませんでした"
+            sendError(code: "REQUEST_INIT_ERROR", message: message)
+            result(FlutterError(code: "REQUEST_INIT_ERROR", message: message, details: nil))
+            return
         }
 
         // オーディオセッション設定
@@ -131,32 +167,45 @@ class SpeechRecognizerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
             try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
             try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
         } catch {
-            sendError(code: "AUDIO_SESSION_ERROR", message: error.localizedDescription)
-            result(FlutterError(code: "AUDIO_SESSION_ERROR",
-                                message: error.localizedDescription, details: nil))
+            let message = "音声入力の初期化に失敗しました"
+            sendError(code: "AUDIO_SESSION_ERROR", message: message)
+            result(FlutterError(code: "AUDIO_SESSION_ERROR", message: message, details: nil))
             return
         }
 
-        // 認識リクエスト作成
-        recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
-        guard let recognitionRequest = recognitionRequest else {
-            result(FlutterError(code: "REQUEST_INIT_ERROR",
-                                message: "認識リクエストを作成できませんでした", details: nil))
-            return
+        startRecognitionTask(with: recognizer)
+        installInputTap()
+
+        do {
+            audioEngine.prepare()
+            try audioEngine.start()
+            isListening = true
+            result(nil)
+        } catch {
+            let message = "音声認識の開始に失敗しました"
+            sendError(code: "AUDIO_ENGINE_ERROR", message: message)
+            stopCurrentSession()
+            result(FlutterError(code: "AUDIO_ENGINE_ERROR", message: message, details: nil))
         }
+    }
 
-        recognitionRequest.shouldReportPartialResults = true
-        recognitionRequest.requiresOnDeviceRecognition = true
+    private func stopListening(result: @escaping FlutterResult) {
+        isListening = false
+        stopCurrentSession()
+        result(nil)
+    }
 
-        // 認識タスク開始
-        recognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest) {
+    private func startRecognitionTask(with recognizer: SFSpeechRecognizer) {
+        guard let recognitionRequest = recognitionRequest else { return }
+
+        recognitionTask = recognizer.recognitionTask(with: recognitionRequest) {
             [weak self] taskResult, error in
             guard let self = self else { return }
 
-            if let error = error {
+            if error != nil {
                 // 認識中でなければ（手動停止の場合）エラーを無視
                 guard self.isListening else { return }
-                self.sendError(code: "RECOGNITION_ERROR", message: error.localizedDescription)
+                self.sendError(code: "RECOGNITION_ERROR", message: "音声認識中にエラーが発生しました")
                 self.stopCurrentSession()
                 return
             }
@@ -173,13 +222,10 @@ class SpeechRecognizerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
                 self.silenceTimer?.invalidate()
                 self.silenceTimer = nil
 
-                // iOS の約60秒制限対策: isFinal を受けたらセッションを再起動
+                // iOS の約60秒制限対策: isFinal を受けたら認識タスクだけ再作成
                 if self.isListening {
-                    self.stopCurrentSession()
-                    // 少し遅延を入れてから再起動
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                        guard let self = self, self.isListening else { return }
-                        self.startNewRecognitionSession()
+                        self?.rotateRecognitionTaskIfNeeded()
                     }
                 }
             } else {
@@ -187,10 +233,50 @@ class SpeechRecognizerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
                                data: ["text": text, "confidence": confidence])
             }
         }
+    }
 
-        // オーディオタップ設定（音声レベル監視 + 認識バッファ投入）
+    @discardableResult
+    private func createRecognitionRequest() -> Bool {
+        recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
+        guard let recognitionRequest = recognitionRequest else { return false }
+
+        recognitionRequest.shouldReportPartialResults = true
+        if #available(iOS 13.0, *) {
+            recognitionRequest.requiresOnDeviceRecognition = true
+        }
+        return true
+    }
+
+    /// 既存タスクだけをローテーションして、入力タップと AudioEngine は維持する
+    private func rotateRecognitionTaskIfNeeded() {
+        guard isListening else { return }
+        guard let recognizer = speechRecognizer, recognizer.isAvailable else {
+            sendError(code: "RECOGNIZER_NOT_AVAILABLE", message: "音声認識が一時的に利用できません")
+            stopCurrentSession()
+            return
+        }
+
+        recognitionRequest?.endAudio()
+        recognitionRequest = nil
+        recognitionTask?.cancel()
+        recognitionTask = nil
+
+        guard createRecognitionRequest() else {
+            sendError(code: "REQUEST_INIT_ERROR", message: "認識リクエストを作成できませんでした")
+            stopCurrentSession()
+            return
+        }
+        startRecognitionTask(with: recognizer)
+    }
+
+    private func installInputTap() {
         let inputNode = audioEngine.inputNode
         let recordingFormat = inputNode.outputFormat(forBus: 0)
+
+        if hasInstalledTap {
+            inputNode.removeTap(onBus: 0)
+            hasInstalledTap = false
+        }
 
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) {
             [weak self] buffer, _ in
@@ -201,68 +287,7 @@ class SpeechRecognizerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
             let level = self.calculateRMSLevel(buffer: buffer)
             self.handleAudioLevel(level)
         }
-
-        do {
-            audioEngine.prepare()
-            try audioEngine.start()
-            isListening = true
-            result(nil)
-        } catch {
-            sendError(code: "AUDIO_ENGINE_ERROR", message: error.localizedDescription)
-            result(FlutterError(code: "AUDIO_ENGINE_ERROR",
-                                message: error.localizedDescription, details: nil))
-        }
-    }
-
-    /// 認識セッションのみを再起動（オーディオエンジンは維持）
-    private func startNewRecognitionSession() {
-        recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
-        guard let recognitionRequest = recognitionRequest else { return }
-
-        recognitionRequest.shouldReportPartialResults = true
-        recognitionRequest.requiresOnDeviceRecognition = true
-
-        recognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest) {
-            [weak self] taskResult, error in
-            guard let self = self else { return }
-
-            if let error = error {
-                guard self.isListening else { return }
-                self.sendError(code: "RECOGNITION_ERROR", message: error.localizedDescription)
-                self.stopCurrentSession()
-                return
-            }
-
-            guard let taskResult = taskResult else { return }
-
-            let text = taskResult.bestTranscription.formattedString
-            let confidence: Double = taskResult.bestTranscription.segments.last
-                .map { Double($0.confidence) } ?? 0.0
-
-            if taskResult.isFinal {
-                self.sendEvent(type: "onFinalResult",
-                               data: ["text": text, "confidence": confidence])
-                self.silenceTimer?.invalidate()
-                self.silenceTimer = nil
-
-                if self.isListening {
-                    self.stopCurrentSession()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                        guard let self = self, self.isListening else { return }
-                        self.startNewRecognitionSession()
-                    }
-                }
-            } else {
-                self.sendEvent(type: "onPartialResult",
-                               data: ["text": text, "confidence": confidence])
-            }
-        }
-    }
-
-    private func stopListening(result: @escaping FlutterResult) {
-        isListening = false
-        stopCurrentSession()
-        result(nil)
+        hasInstalledTap = true
     }
 
     private func stopCurrentSession() {
@@ -273,8 +298,19 @@ class SpeechRecognizerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
         recognitionTask?.cancel()
         recognitionTask = nil
 
-        audioEngine.stop()
-        audioEngine.inputNode.removeTap(onBus: 0)
+        if audioEngine.isRunning {
+            audioEngine.stop()
+        }
+        if hasInstalledTap {
+            audioEngine.inputNode.removeTap(onBus: 0)
+            hasInstalledTap = false
+        }
+
+        do {
+            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        } catch {
+            // ここは復旧不能ではないため黙って継続
+        }
     }
 
     // MARK: - 無音検知

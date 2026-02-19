@@ -10,6 +10,11 @@
 .history
 .svn/
 .swiftpm/
+.config/
+.dart_tool/
+.dart-tool/
+.dartServer/
+.flutter
 migrate_working_dir/
 
 # IntelliJ related
@@ -21,7 +26,7 @@ migrate_working_dir/
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line
 # is commented out by default.
-#.vscode/
+.vscode/
 
 # Flutter/Dart/Pub related
 **/doc/api/
@@ -45,8 +50,6 @@ app.*.map.json
 /android/app/release
 
 # API Keys and Secrets
-lib/firebase_options.dart
-ios/Runner/GoogleService-Info.plist
 macos/Runner/GoogleService-Info.plist
 android/app/google-services.json
 key.properties

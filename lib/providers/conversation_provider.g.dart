@@ -29,7 +29,7 @@ final class ConversationNotifierProvider
           argument: null,
           retry: null,
           name: r'conversationProvider',
-          isAutoDispose: true,
+          isAutoDispose: false,
           dependencies: null,
           $allTransitiveDependencies: null,
         );
@@ -51,7 +51,7 @@ final class ConversationNotifierProvider
 }
 
 String _$conversationNotifierHash() =>
-    r'183cdb0ed887cc09956bd3d4b7bde903ed3c28e2';
+    r'3c6ecf0df9e8df8e6cd33723b9e2ddeb66a2e325';
 
 /// 会話の開始・終了・削除を管理する Notifier
 ///

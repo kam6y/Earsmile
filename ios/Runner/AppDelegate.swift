@@ -12,6 +12,8 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
-    SpeechRecognizerPlugin.register(with: engineBridge.pluginRegistry.registrar(forPlugin: "SpeechRecognizerPlugin")!)
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "SpeechRecognizerPlugin") {
+      SpeechRecognizerPlugin.register(with: registrar)
+    }
   }
 }

@@ -8,6 +8,7 @@ import '../config/constants.dart';
 import '../config/routes.dart';
 import '../providers/auth_provider.dart';
 import '../providers/speech_provider.dart';
+import '../utils/app_logger.dart';
 
 /// スプラッシュ画面
 ///
@@ -27,6 +28,7 @@ class SplashScreen extends ConsumerStatefulWidget {
 class _SplashScreenState extends ConsumerState<SplashScreen> {
   Timer? _timeoutTimer;
   bool _hasNavigated = false;
+  bool _isWaitingPermissionFlow = false;
 
   @override
   void initState() {
@@ -46,6 +48,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   Future<void> _startInitialization() async {
     // タイムアウトタイマー: 3秒以内に初期化が終わらなければ強制遷移
     _timeoutTimer = Timer(AppConstants.splashTimeout, () {
+      if (_isWaitingPermissionFlow) return;
       _navigateToHome();
     });
 
@@ -53,23 +56,45 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     try {
       await ref.read(authProvider.future);
     } catch (e) {
-      debugPrint('SplashScreen: Firebase auth failed: $e');
+      AppLogger.warn(
+        'SplashScreen: Firebase auth failed',
+        error: e,
+      );
     }
 
     // マイク・音声認識の権限チェック
     try {
-      final speechService = ref.read(speechServiceProvider);
-      final permissionStatus = await speechService.checkPermission();
-      if (permissionStatus == 'notDetermined') {
-        await speechService.requestPermission();
-      } else if (permissionStatus == 'denied' && mounted) {
-        await _showPermissionDeniedDialog();
-      }
+      await _ensureSpeechPermission();
     } catch (e) {
-      debugPrint('SplashScreen: Permission check failed: $e');
+      AppLogger.warn(
+        'SplashScreen: Permission check failed',
+        error: e,
+      );
     }
 
     _navigateToHome();
+  }
+
+  Future<void> _ensureSpeechPermission() async {
+    final speechService = ref.read(speechServiceProvider);
+    _isWaitingPermissionFlow = true;
+    try {
+      final permissionStatus = await speechService.checkPermission();
+
+      if (permissionStatus == 'notDetermined') {
+        final granted = await speechService.requestPermission();
+        if (!granted) {
+          await _showPermissionDeniedDialog();
+        }
+        return;
+      }
+
+      if (permissionStatus == 'denied') {
+        await _showPermissionDeniedDialog();
+      }
+    } finally {
+      _isWaitingPermissionFlow = false;
+    }
   }
 
   Future<void> _showPermissionDeniedDialog() async {
@@ -79,10 +104,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: const Text('マイクの使用が必要です'),
-        content: const Text(
-          'お話しされた内容を文字にするには、マイクの使用を許可してください。\n\n'
-          '「設定」アプリを開いて「earsmile」のマイクを有効にしてください。',
-        ),
+        content: const Text(AppConstants.speechPermissionDeniedMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import '../config/constants.dart';
 import '../models/message.dart';
 import '../services/speech_service.dart';
+import '../utils/app_logger.dart';
 import 'local_storage_provider.dart';
 
 part 'speech_provider.g.dart';
@@ -87,6 +88,16 @@ class SpeechNotifier extends _$SpeechNotifier {
     _currentConversationId = conversationId;
   }
 
+  /// 現在の会話IDを破棄する
+  void clearConversationId() {
+    _currentConversationId = null;
+  }
+
+  /// 画面表示用の音声認識状態を初期化する
+  void resetDisplayState() {
+    state = const SpeechState();
+  }
+
   /// 音声認識を開始する
   Future<void> startListening() async {
     if (_currentConversationId == null) return;
@@ -103,8 +114,24 @@ class SpeechNotifier extends _$SpeechNotifier {
         errorMessage: null,
         retryCount: 0,
       );
+    } on PlatformException catch (e) {
+      AppLogger.warn(
+        'SpeechNotifier.startListening failed',
+        error: e,
+      );
+      final errorMessage = switch (e.code) {
+        'PERMISSION_DENIED' => AppConstants.speechPermissionDeniedMessage,
+        _ => '音声認識の開始に失敗しました',
+      };
+      state = state.copyWith(
+        status: SpeechStatus.error,
+        errorMessage: errorMessage,
+      );
     } catch (e) {
-      debugPrint('SpeechNotifier.startListening error: $e');
+      AppLogger.warn(
+        'SpeechNotifier.startListening failed',
+        error: e,
+      );
       state = state.copyWith(
         status: SpeechStatus.error,
         errorMessage: '音声認識の開始に失敗しました',
@@ -118,7 +145,10 @@ class SpeechNotifier extends _$SpeechNotifier {
     try {
       await speechService.stopListening();
     } catch (e) {
-      debugPrint('SpeechNotifier.pause error: $e');
+      AppLogger.warn(
+        'SpeechNotifier.pause failed',
+        error: e,
+      );
     }
     _eventSubscription?.cancel();
     state = state.copyWith(status: SpeechStatus.paused);
@@ -136,7 +166,10 @@ class SpeechNotifier extends _$SpeechNotifier {
       final speechService = ref.read(speechServiceProvider);
       await speechService.stopListening();
     } catch (e) {
-      debugPrint('SpeechNotifier.stop error: $e');
+      AppLogger.warn(
+        'SpeechNotifier.stop failed',
+        error: e,
+      );
     }
     // async 待機後に Provider が破棄されている場合があるため確認
     if (!ref.mounted) return;
@@ -188,8 +221,8 @@ class SpeechNotifier extends _$SpeechNotifier {
   }
 
   /// エラー発生時の自動リトライ処理
-  void _handleError(String code, String message) {
-    debugPrint('SpeechNotifier._handleError: code=$code, message=$message');
+  void _handleError(String code, String _) {
+    AppLogger.warn('SpeechNotifier._handleError: code=$code');
     final newRetryCount = state.retryCount + 1;
 
     if (newRetryCount >= AppConstants.maxRetryCount) {

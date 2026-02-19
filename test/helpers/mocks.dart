@@ -14,6 +14,8 @@ class MockSpeechService extends SpeechService {
       StreamController<SpeechEvent>.broadcast(sync: true);
   bool startCalled = false;
   bool stopCalled = false;
+  int startCallCount = 0;
+  int stopCallCount = 0;
   bool shouldThrowOnStart = false;
   String permissionStatus = 'granted';
 
@@ -25,11 +27,13 @@ class MockSpeechService extends SpeechService {
       throw Exception('Start failed');
     }
     startCalled = true;
+    startCallCount += 1;
   }
 
   @override
   Future<void> stopListening() async {
     stopCalled = true;
+    stopCallCount += 1;
   }
 
   @override
@@ -96,9 +100,7 @@ class MockLocalStorageService extends LocalStorageService {
 
   @override
   List<Message> getMessages(String conversationId) {
-    return messages
-        .where((m) => m.conversationId == conversationId)
-        .toList()
+    return messages.where((m) => m.conversationId == conversationId).toList()
       ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
   }
 

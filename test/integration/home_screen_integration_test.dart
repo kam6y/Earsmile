@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:earsmile/providers/connectivity_provider.dart';
 import 'package:earsmile/providers/local_storage_provider.dart';
@@ -27,6 +28,26 @@ void main() {
   Widget buildTestWidget({
     bool isOffline = false,
   }) {
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const HomeScreen(),
+        ),
+        GoRoute(
+          path: '/history',
+          builder: (context, state) =>
+              const Scaffold(body: Center(child: Text('History Route'))),
+        ),
+        GoRoute(
+          path: '/settings',
+          builder: (context, state) =>
+              const Scaffold(body: Center(child: Text('Settings Route'))),
+        ),
+      ],
+    );
+
     return ProviderScope(
       overrides: [
         speechServiceProvider.overrideWithValue(mockSpeechService),
@@ -36,9 +57,7 @@ void main() {
           (ref) => Stream.value(!isOffline),
         ),
       ],
-      child: const MaterialApp(
-        home: HomeScreen(),
-      ),
+      child: MaterialApp.router(routerConfig: router),
     );
   }
 
@@ -51,6 +70,38 @@ void main() {
       expect(mockStorage.conversations, hasLength(1));
       // 音声認識が開始されたことを確認
       expect(mockSpeechService.startCalled, isTrue);
+    });
+
+    testWidgets('別画面から戻ると新しい会話が自動で開始される', (tester) async {
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      expect(mockStorage.conversations, hasLength(1));
+      expect(mockSpeechService.startCallCount, 1);
+
+      mockSpeechService.emitEvent(const SpeechEvent(
+        type: SpeechEventType.finalResult,
+        text: '前回会話のテキスト',
+        confidence: 0.9,
+      ));
+      await tester.pump();
+      expect(find.text('前回会話のテキスト'), findsOneWidget);
+
+      await tester.tap(find.text('りれき'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('History Route'), findsOneWidget);
+      expect(mockSpeechService.stopCallCount, 1);
+      expect(mockStorage.conversations.first.endedAt, isNotNull);
+
+      final pushedContext = tester.element(find.text('History Route'));
+      Navigator.of(pushedContext).pop();
+      await tester.pumpAndSettle();
+
+      expect(mockSpeechService.startCallCount, 2);
+      expect(mockStorage.conversations, hasLength(2));
+      expect(mockStorage.conversations.last.endedAt, isNull);
+      expect(find.text('前回会話のテキスト'), findsNothing);
     });
 
     testWidgets('partialResult でグレーのテキストが表示される', (tester) async {
@@ -67,8 +118,7 @@ void main() {
       expect(find.text('認識中のテキスト'), findsOneWidget);
     });
 
-    testWidgets('finalResult でテキストが確定表示され LocalStorage に保存される',
-        (tester) async {
+    testWidgets('finalResult でテキストが確定表示され LocalStorage に保存される', (tester) async {
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 
@@ -109,8 +159,7 @@ void main() {
       expect(mockStorage.messages.first.text, '無音前テキスト');
     });
 
-    testWidgets('停止ボタンタップで paused に遷移しボタンが「再開」に変化する',
-        (tester) async {
+    testWidgets('停止ボタンタップで paused に遷移しボタンが「再開」に変化する', (tester) async {
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 

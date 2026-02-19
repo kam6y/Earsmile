@@ -116,5 +116,13 @@ void main() {
       expect(event.confidence, 1.0);
       expect(event.confidence, isA<double>());
     });
+
+    test('type が不正な場合は INVALID_EVENT_PAYLOAD を返す', () {
+      final event = SpeechEvent.fromMap({
+        'type': 123,
+      });
+      expect(event.type, SpeechEventType.error);
+      expect(event.errorCode, 'INVALID_EVENT_PAYLOAD');
+    });
   });
 }

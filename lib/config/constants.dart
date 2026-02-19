@@ -49,4 +49,12 @@ abstract class AppConstants {
 
   /// Splash 画面の最大表示時間
   static const Duration splashTimeout = Duration(seconds: 3);
+
+  // -------------------------
+  // メッセージ
+  // -------------------------
+
+  /// 音声認識に必要な権限がない場合の案内文言
+  static const String speechPermissionDeniedMessage = 'マイクまたは音声認識の権限がありません。\n'
+      '「設定」アプリで「earsmile」のマイクと音声認識を許可してください。';
 }

@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:earsmile/config/constants.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:earsmile/providers/speech_provider.dart';
@@ -17,11 +19,15 @@ class MockSpeechService extends SpeechService {
   bool startCalled = false;
   bool stopCalled = false;
   bool shouldThrowOnStart = false;
+  Object? startListeningError;
 
   MockSpeechService() : super();
 
   @override
   Future<void> startListening() async {
+    if (startListeningError != null) {
+      throw startListeningError!;
+    }
     if (shouldThrowOnStart) {
       throw Exception('Start failed');
     }
@@ -114,6 +120,19 @@ void main() {
       expect(state.status, SpeechStatus.error);
     });
 
+    test('startListening 権限拒否時は案内メッセージを表示する', () async {
+      mockSpeechService.startListeningError =
+          PlatformException(code: 'PERMISSION_DENIED');
+
+      final notifier = container.read(speechProvider.notifier);
+      notifier.setConversationId('test-conversation-id');
+      await notifier.startListening();
+
+      final state = container.read(speechProvider);
+      expect(state.status, SpeechStatus.error);
+      expect(state.errorMessage, AppConstants.speechPermissionDeniedMessage);
+    });
+
     test('pause で status が paused に遷移する', () async {
       final notifier = container.read(speechProvider.notifier);
       notifier.setConversationId('test-conversation-id');
@@ -157,7 +176,6 @@ void main() {
         confidence: 0.7,
       ));
 
-
       final state = container.read(speechProvider);
       expect(state.currentPartialText, 'こんにち');
       expect(state.currentConfidence, 0.7);
@@ -174,14 +192,12 @@ void main() {
         confidence: 0.95,
       ));
 
-
-
       final state = container.read(speechProvider);
       expect(state.confirmedMessages, hasLength(1));
       expect(state.confirmedMessages.first.text, 'こんにちは');
       expect(state.confirmedMessages.first.isFinal, true);
-      expect(state.confirmedMessages.first.conversationId,
-          'test-conversation-id');
+      expect(
+          state.confirmedMessages.first.conversationId, 'test-conversation-id');
       expect(state.currentPartialText, '');
     });
 
@@ -195,8 +211,6 @@ void main() {
         text: 'テスト保存',
         confidence: 0.9,
       ));
-
-
 
       expect(mockLocalStorageService.savedMessages, hasLength(1));
       expect(mockLocalStorageService.savedMessages.first.text, 'テスト保存');
@@ -214,11 +228,9 @@ void main() {
         confidence: 0.6,
       ));
 
-
       // 次に silence detected を送信
-      mockSpeechService.emitEvent(
-          const SpeechEvent(type: SpeechEventType.silenceDetected));
-
+      mockSpeechService
+          .emitEvent(const SpeechEvent(type: SpeechEventType.silenceDetected));
 
       final state = container.read(speechProvider);
       expect(state.confirmedMessages, hasLength(1));
@@ -231,9 +243,8 @@ void main() {
       notifier.setConversationId('test-conversation-id');
       await notifier.startListening();
 
-      mockSpeechService.emitEvent(
-          const SpeechEvent(type: SpeechEventType.silenceDetected));
-
+      mockSpeechService
+          .emitEvent(const SpeechEvent(type: SpeechEventType.silenceDetected));
 
       final state = container.read(speechProvider);
       expect(state.confirmedMessages, isEmpty);
@@ -250,7 +261,6 @@ void main() {
           errorCode: 'RECOGNITION_ERROR',
           errorMessage: '認識エラー',
         ));
-  
       }
 
       final state = container.read(speechProvider);

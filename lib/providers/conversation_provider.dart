@@ -10,7 +10,7 @@ part 'conversation_provider.g.dart';
 /// 会話の開始・終了・削除を管理する Notifier
 ///
 /// 生成されるプロバイダ名: conversationProvider
-@riverpod
+@Riverpod(keepAlive: true)
 class ConversationNotifier extends _$ConversationNotifier {
   final _uuid = const Uuid();
 
