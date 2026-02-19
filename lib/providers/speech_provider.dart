@@ -127,11 +127,13 @@ class SpeechNotifier extends _$SpeechNotifier {
 
   /// 音声認識を完全停止する
   Future<void> stop() async {
-    final speechService = ref.read(speechServiceProvider);
+    _eventSubscription?.cancel();
     try {
+      final speechService = ref.read(speechServiceProvider);
       await speechService.stopListening();
     } catch (_) {}
-    _eventSubscription?.cancel();
+    // async 待機後に Provider が破棄されている場合があるため確認
+    if (!ref.mounted) return;
     state = state.copyWith(status: SpeechStatus.idle);
   }
 
@@ -193,6 +195,7 @@ class SpeechNotifier extends _$SpeechNotifier {
     } else {
       state = state.copyWith(retryCount: newRetryCount);
       Future.delayed(AppConstants.retryDelay, () {
+        if (!ref.mounted) return;
         if (state.status != SpeechStatus.idle &&
             state.status != SpeechStatus.paused) {
           startListening();

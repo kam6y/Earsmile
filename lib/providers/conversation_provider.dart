@@ -38,7 +38,11 @@ class ConversationNotifier extends _$ConversationNotifier {
     if (state == null) return;
     final conversation = state!;
     conversation.endedAt = DateTime.now();
-    await ref.read(localStorageServiceProvider).saveConversation(conversation);
+    try {
+      await ref.read(localStorageServiceProvider).saveConversation(conversation);
+    } catch (_) {}
+    // async 待機後に Provider が破棄されている場合があるため確認
+    if (!ref.mounted) return;
     state = conversation;
   }
 
