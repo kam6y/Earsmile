@@ -51,7 +51,7 @@ final class ConversationNotifierProvider
 }
 
 String _$conversationNotifierHash() =>
-    r'20ecce77758211fd4b71251692ca8f39c928757b';
+    r'183cdb0ed887cc09956bd3d4b7bde903ed3c28e2';
 
 /// 会話の開始・終了・削除を管理する Notifier
 ///

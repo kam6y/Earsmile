@@ -1,8 +1,8 @@
-import 'package:intl/intl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/conversation.dart';
+import '../utils/date_formatter.dart';
 import 'local_storage_provider.dart';
 
 part 'conversation_provider.g.dart';
@@ -20,37 +20,32 @@ class ConversationNotifier extends _$ConversationNotifier {
   }
 
   /// 新しい会話を開始し、ObjectBox に保存して返す
-  Future<Conversation> startNewConversation() async {
+  Conversation startNewConversation() {
     final now = DateTime.now();
-    final formatter = DateFormat('yyyy/MM/dd HH:mm');
     final conversation = Conversation(
       uuid: _uuid.v4(),
       startedAt: now,
-      title: '${formatter.format(now)} の会話',
+      title: DateFormatter.toConversationTitle(now),
     );
-    await ref.read(localStorageServiceProvider).saveConversation(conversation);
+    ref.read(localStorageServiceProvider).saveConversation(conversation);
     state = conversation;
     return conversation;
   }
 
   /// 現在の会話を終了する（endedAt を設定して保存）
-  Future<void> endConversation() async {
+  void endConversation() {
     if (state == null) return;
     final conversation = state!;
     conversation.endedAt = DateTime.now();
-    try {
-      await ref.read(localStorageServiceProvider).saveConversation(conversation);
-    } catch (_) {}
-    // async 待機後に Provider が破棄されている場合があるため確認
-    if (!ref.mounted) return;
+    ref.read(localStorageServiceProvider).saveConversation(conversation);
     state = conversation;
   }
 
   /// 会話とそのメッセージを削除する
-  Future<void> deleteConversation(String uuid) async {
+  void deleteConversation(String uuid) {
     final storage = ref.read(localStorageServiceProvider);
-    await storage.deleteMessages(uuid);
-    await storage.deleteConversation(uuid);
+    storage.deleteMessages(uuid);
+    storage.deleteConversation(uuid);
     if (state?.uuid == uuid) {
       state = null;
     }

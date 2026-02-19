@@ -12,8 +12,7 @@ class MockLocalStorageService extends LocalStorageService {
   final List<String> deletedMessageConversationIds = [];
 
   @override
-  Future<void> saveConversation(Conversation conversation) async {
-    // 既存を更新、なければ追加
+  void saveConversation(Conversation conversation) {
     final index =
         savedConversations.indexWhere((c) => c.uuid == conversation.uuid);
     if (index >= 0) {
@@ -24,13 +23,13 @@ class MockLocalStorageService extends LocalStorageService {
   }
 
   @override
-  Future<void> deleteConversation(String uuid) async {
+  void deleteConversation(String uuid) {
     deletedConversationUuids.add(uuid);
     savedConversations.removeWhere((c) => c.uuid == uuid);
   }
 
   @override
-  Future<void> deleteMessages(String conversationId) async {
+  void deleteMessages(String conversationId) {
     deletedMessageConversationIds.add(conversationId);
   }
 }
@@ -58,9 +57,9 @@ void main() {
       expect(state, isNull);
     });
 
-    test('startNewConversation で会話が生成・保存される', () async {
+    test('startNewConversation で会話が生成・保存される', () {
       final notifier = container.read(conversationProvider.notifier);
-      final conversation = await notifier.startNewConversation();
+      final conversation = notifier.startNewConversation();
 
       expect(conversation.uuid, isNotEmpty);
       expect(conversation.title, contains('の会話'));
@@ -76,10 +75,10 @@ void main() {
       expect(state?.uuid, conversation.uuid);
     });
 
-    test('endConversation で endedAt が設定される', () async {
+    test('endConversation で endedAt が設定される', () {
       final notifier = container.read(conversationProvider.notifier);
-      await notifier.startNewConversation();
-      await notifier.endConversation();
+      notifier.startNewConversation();
+      notifier.endConversation();
 
       final state = container.read(conversationProvider);
       expect(state?.endedAt, isNotNull);
@@ -90,20 +89,20 @@ void main() {
     });
 
     test('アクティブ会話がない状態で endConversation を呼んでもエラーにならない',
-        () async {
+        () {
       final notifier = container.read(conversationProvider.notifier);
       // 例外が発生しないことを確認
-      await notifier.endConversation();
+      notifier.endConversation();
 
       final state = container.read(conversationProvider);
       expect(state, isNull);
     });
 
-    test('deleteConversation でメッセージと会話が削除される', () async {
+    test('deleteConversation でメッセージと会話が削除される', () {
       final notifier = container.read(conversationProvider.notifier);
-      final conversation = await notifier.startNewConversation();
+      final conversation = notifier.startNewConversation();
 
-      await notifier.deleteConversation(conversation.uuid);
+      notifier.deleteConversation(conversation.uuid);
 
       // メッセージと会話の削除が呼ばれたことを確認
       expect(mockStorage.deletedMessageConversationIds,
@@ -116,11 +115,11 @@ void main() {
       expect(state, isNull);
     });
 
-    test('別の会話を deleteConversation しても state は変わらない', () async {
+    test('別の会話を deleteConversation しても state は変わらない', () {
       final notifier = container.read(conversationProvider.notifier);
-      final conversation = await notifier.startNewConversation();
+      final conversation = notifier.startNewConversation();
 
-      await notifier.deleteConversation('other-uuid');
+      notifier.deleteConversation('other-uuid');
 
       // アクティブ会話の state は変わらない
       final state = container.read(conversationProvider);

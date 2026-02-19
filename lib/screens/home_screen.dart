@@ -37,7 +37,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _initialized = true;
 
     final conversationNotifier = ref.read(conversationProvider.notifier);
-    final conversation = await conversationNotifier.startNewConversation();
+    final conversation = conversationNotifier.startNewConversation();
 
     final speechNotifier = ref.read(speechProvider.notifier);
     speechNotifier.setConversationId(conversation.uuid);
@@ -46,7 +46,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   void deactivate() {
+    // stop() は async だが、deactivate() 内では await できない。
+    // EventChannel の購読解除とネイティブ側の停止を発火する。
     ref.read(speechProvider.notifier).stop();
+    // endConversation() は同期化済みのため確実に保存される。
     ref.read(conversationProvider.notifier).endConversation();
     super.deactivate();
   }

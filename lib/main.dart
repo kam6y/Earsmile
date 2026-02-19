@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'app.dart';
+import 'providers/auth_provider.dart';
 import 'providers/local_storage_provider.dart';
 import 'providers/speech_provider.dart';
+import 'services/auth_service.dart';
 import 'services/local_storage_service.dart';
 import 'services/speech_service.dart';
 
@@ -20,12 +22,14 @@ void main() async {
   await initializeDateFormatting('ja');
 
   final speechService = SpeechService();
+  final authService = AuthService();
 
   runApp(
     ProviderScope(
       overrides: [
         localStorageServiceProvider.overrideWithValue(localStorageService),
         speechServiceProvider.overrideWithValue(speechService),
+        authServiceProvider.overrideWithValue(authService),
       ],
       child: const App(),
     ),

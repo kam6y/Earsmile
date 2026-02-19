@@ -51,7 +51,7 @@ void main() {
           () => _FakeConversationListNotifier(conversations),
         ),
         messageListProvider(conversationId).overrideWith(
-          (ref) async => messages,
+          (ref) => messages,
         ),
         settingsProvider.overrideWith(
           () => _FakeSettingsNotifier(),
@@ -155,17 +155,17 @@ class _FakeConversationListNotifier extends ConversationListNotifier {
   _FakeConversationListNotifier(this._conversations);
 
   @override
-  Future<List<Conversation>> build() async => _conversations;
+  List<Conversation> build() => _conversations;
 
   @override
-  Future<void> deleteConversation(String uuid) async {
+  void deleteConversation(String uuid) {
     _conversations.removeWhere((c) => c.uuid == uuid);
-    state = AsyncData(List.from(_conversations));
+    state = List.from(_conversations);
   }
 }
 
 /// テスト用 SettingsNotifier
 class _FakeSettingsNotifier extends SettingsNotifier {
   @override
-  Future<AppSettings> build() async => AppSettings();
+  AppSettings build() => AppSettings();
 }

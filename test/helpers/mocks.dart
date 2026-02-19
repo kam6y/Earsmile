@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:earsmile/models/app_settings.dart';
 import 'package:earsmile/models/conversation.dart';
 import 'package:earsmile/models/message.dart';
@@ -61,15 +60,15 @@ class MockLocalStorageService extends LocalStorageService {
   Future<void> initialize() async {}
 
   @override
-  Future<AppSettings> loadSettings() async => _settings;
+  AppSettings loadSettings() => _settings;
 
   @override
-  Future<void> saveSettings(AppSettings settings) async {
+  void saveSettings(AppSettings settings) {
     _settings = settings;
   }
 
   @override
-  Future<void> saveConversation(Conversation conversation) async {
+  void saveConversation(Conversation conversation) {
     final index = conversations.indexWhere((c) => c.uuid == conversation.uuid);
     if (index >= 0) {
       conversations[index] = conversation;
@@ -79,24 +78,24 @@ class MockLocalStorageService extends LocalStorageService {
   }
 
   @override
-  Future<List<Conversation>> getAllConversations() async {
+  List<Conversation> getAllConversations() {
     final sorted = List<Conversation>.from(conversations)
       ..sort((a, b) => b.startedAt.compareTo(a.startedAt));
     return sorted;
   }
 
   @override
-  Future<void> deleteConversation(String uuid) async {
+  void deleteConversation(String uuid) {
     conversations.removeWhere((c) => c.uuid == uuid);
   }
 
   @override
-  Future<void> addMessage(Message message) async {
+  void addMessage(Message message) {
     messages.add(message);
   }
 
   @override
-  Future<List<Message>> getMessages(String conversationId) async {
+  List<Message> getMessages(String conversationId) {
     return messages
         .where((m) => m.conversationId == conversationId)
         .toList()
@@ -104,7 +103,7 @@ class MockLocalStorageService extends LocalStorageService {
   }
 
   @override
-  Future<void> deleteMessages(String conversationId) async {
+  void deleteMessages(String conversationId) {
     messages.removeWhere((m) => m.conversationId == conversationId);
   }
 }
@@ -117,7 +116,7 @@ class FakeSettingsNotifier extends SettingsNotifier {
       : _initial = settings ?? AppSettings();
 
   @override
-  Future<AppSettings> build() async => _initial;
+  AppSettings build() => _initial;
 }
 
 /// テスト用 ConversationListNotifier
@@ -127,11 +126,11 @@ class FakeConversationListNotifier extends ConversationListNotifier {
   FakeConversationListNotifier(this._conversations);
 
   @override
-  Future<List<Conversation>> build() async => _conversations;
+  List<Conversation> build() => _conversations;
 
   @override
-  Future<void> deleteConversation(String uuid) async {
+  void deleteConversation(String uuid) {
     _conversations.removeWhere((c) => c.uuid == uuid);
-    state = AsyncData(List.from(_conversations));
+    state = List.from(_conversations);
   }
 }

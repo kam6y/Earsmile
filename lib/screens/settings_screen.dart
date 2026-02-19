@@ -18,17 +18,8 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final settingsAsync = ref.watch(settingsProvider);
-
-    return settingsAsync.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, s) => Scaffold(
-        body: Center(child: Text('エラーが発生しました: $e')),
-      ),
-      data: (settings) => _buildContent(context, ref, settings),
-    );
+    final settings = ref.watch(settingsProvider);
+    return _buildContent(context, ref, settings);
   }
 
   Widget _buildContent(

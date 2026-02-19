@@ -9,9 +9,9 @@ part 'message_list_provider.g.dart';
 ///
 /// 生成されるプロバイダ名: messageListProvider
 @riverpod
-Future<List<Message>> messageList(
+List<Message> messageList(
   Ref ref,
   String conversationId,
-) async {
+) {
   return ref.read(localStorageServiceProvider).getMessages(conversationId);
 }

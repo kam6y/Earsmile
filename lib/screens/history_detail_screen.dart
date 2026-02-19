@@ -23,31 +23,19 @@ class HistoryDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final messagesAsync = ref.watch(messageListProvider(conversationId));
-    final conversationsAsync = ref.watch(conversationListProvider);
+    final messages = ref.watch(messageListProvider(conversationId));
+    final conversations = ref.watch(conversationListProvider);
 
-    return messagesAsync.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, s) => Scaffold(
-        body: Center(child: Text('エラーが発生しました: $e')),
-      ),
-      data: (messages) {
-        // 会話情報を取得してタイトル表示に使う
-        String title = '会話の詳細';
-        if (conversationsAsync case AsyncData(:final value)) {
-          for (final c in value) {
-            if (c.uuid == conversationId) {
-              title = DateFormatter.toDetailTitleFormat(c.startedAt);
-              break;
-            }
-          }
-        }
+    // 会話情報を取得してタイトル表示に使う
+    String title = '会話の詳細';
+    for (final c in conversations) {
+      if (c.uuid == conversationId) {
+        title = DateFormatter.toDetailTitleFormat(c.startedAt);
+        break;
+      }
+    }
 
-        return _buildContent(context, ref, messages, title);
-      },
-    );
+    return _buildContent(context, ref, messages, title);
   }
 
   Widget _buildContent(
@@ -57,11 +45,8 @@ class HistoryDetailScreen extends ConsumerWidget {
     String title,
   ) {
     final theme = Theme.of(context);
-    final settingsAsync = ref.watch(settingsProvider);
-    final fontSize = switch (settingsAsync) {
-      AsyncData(:final value) => resolveBodyFontSize(value.fontSize),
-      _ => resolveBodyFontSize(1.0),
-    };
+    final settings = ref.watch(settingsProvider);
+    final fontSize = resolveBodyFontSize(settings.fontSize);
 
     return Scaffold(
       appBar: AppBar(
@@ -152,7 +137,7 @@ class HistoryDetailScreen extends ConsumerWidget {
       message: '本当に消しますか？',
     );
     if (confirmed && context.mounted) {
-      await ref
+      ref
           .read(conversationListProvider.notifier)
           .deleteConversation(conversationId);
       if (context.mounted) {

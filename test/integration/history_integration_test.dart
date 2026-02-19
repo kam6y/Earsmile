@@ -117,7 +117,7 @@ void main() {
             () => FakeConversationListNotifier(conversations),
           ),
           messageListProvider(conversationId).overrideWith(
-            (ref) async => messages,
+            (ref) => messages,
           ),
           settingsProvider.overrideWith(() => FakeSettingsNotifier()),
         ],

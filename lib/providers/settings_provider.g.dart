@@ -23,7 +23,7 @@ final settingsProvider = SettingsNotifierProvider._();
 /// - updateFontSize(): フォントサイズ変更 → ObjectBox 保存
 /// - toggleHighContrast(): コントラスト切替 → ObjectBox 保存
 final class SettingsNotifierProvider
-    extends $AsyncNotifierProvider<SettingsNotifier, AppSettings> {
+    extends $NotifierProvider<SettingsNotifier, AppSettings> {
   /// アプリ設定の状態管理 Provider
   ///
   /// - build(): ObjectBox から設定を読み込んで初期状態を返す
@@ -46,9 +46,17 @@ final class SettingsNotifierProvider
   @$internal
   @override
   SettingsNotifier create() => SettingsNotifier();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AppSettings value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AppSettings>(value),
+    );
+  }
 }
 
-String _$settingsNotifierHash() => r'e6d925f7c9b78887a4b57c128c5b38c4e2b8cf1c';
+String _$settingsNotifierHash() => r'7a311132e25d4deab4eb8de573078e4cad5f5c8c';
 
 /// アプリ設定の状態管理 Provider
 ///
@@ -56,17 +64,14 @@ String _$settingsNotifierHash() => r'e6d925f7c9b78887a4b57c128c5b38c4e2b8cf1c';
 /// - updateFontSize(): フォントサイズ変更 → ObjectBox 保存
 /// - toggleHighContrast(): コントラスト切替 → ObjectBox 保存
 
-abstract class _$SettingsNotifier extends $AsyncNotifier<AppSettings> {
-  FutureOr<AppSettings> build();
+abstract class _$SettingsNotifier extends $Notifier<AppSettings> {
+  AppSettings build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<AsyncValue<AppSettings>, AppSettings>;
+    final ref = this.ref as $Ref<AppSettings, AppSettings>;
     final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<AppSettings>, AppSettings>,
-        AsyncValue<AppSettings>,
-        Object?,
-        Object?>;
+        AnyNotifier<AppSettings, AppSettings>, AppSettings, Object?, Object?>;
     element.handleCreate(ref, build);
   }
 }

@@ -11,15 +11,15 @@ part 'conversation_list_provider.g.dart';
 @riverpod
 class ConversationListNotifier extends _$ConversationListNotifier {
   @override
-  Future<List<Conversation>> build() async {
+  List<Conversation> build() {
     return ref.read(localStorageServiceProvider).getAllConversations();
   }
 
   /// 会話とそのメッセージを削除し、一覧を更新する
-  Future<void> deleteConversation(String uuid) async {
+  void deleteConversation(String uuid) {
     final storage = ref.read(localStorageServiceProvider);
-    await storage.deleteMessages(uuid);
-    await storage.deleteConversation(uuid);
+    storage.deleteMessages(uuid);
+    storage.deleteConversation(uuid);
     ref.invalidateSelf();
   }
 }

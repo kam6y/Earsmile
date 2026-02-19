@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../config/constants.dart';
+import '../config/routes.dart';
 import '../providers/speech_provider.dart';
 import '../utils/accessibility_helpers.dart';
 import 'large_button.dart';
@@ -50,7 +51,7 @@ class ControlPanel extends ConsumerWidget {
             semanticsLabel: AccessibilityLabels.openHistory,
             backgroundColor: Colors.grey.shade600,
             foregroundColor: Colors.white,
-            onPressed: () => context.push('/history'),
+            onPressed: () => context.push(RoutePaths.history),
           ),
           // 設定ボタン
           LargeButton(
@@ -58,7 +59,7 @@ class ControlPanel extends ConsumerWidget {
             semanticsLabel: AccessibilityLabels.openSettings,
             backgroundColor: Colors.grey.shade600,
             foregroundColor: Colors.white,
-            onPressed: () => context.push('/settings'),
+            onPressed: () => context.push(RoutePaths.settings),
           ),
         ],
       ),

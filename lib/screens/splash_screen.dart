@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../config/constants.dart';
+import '../config/routes.dart';
 import '../providers/auth_provider.dart';
 import '../providers/speech_provider.dart';
 
@@ -51,8 +52,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     // Firebase 匿名認証を実行
     try {
       await ref.read(authProvider.future);
-    } catch (_) {
-      // オフラインファースト: 認証失敗でもアプリ利用を許可
+    } catch (e) {
+      debugPrint('SplashScreen: Firebase auth failed: $e');
     }
 
     // マイク・音声認識の権限チェック
@@ -64,8 +65,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       } else if (permissionStatus == 'denied' && mounted) {
         await _showPermissionDeniedDialog();
       }
-    } catch (_) {
-      // 権限チェック失敗でもアプリ利用を許可
+    } catch (e) {
+      debugPrint('SplashScreen: Permission check failed: $e');
     }
 
     _navigateToHome();
@@ -96,7 +97,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     if (_hasNavigated || !mounted) return;
     _hasNavigated = true;
     _timeoutTimer?.cancel();
-    context.go('/');
+    context.go(RoutePaths.home);
   }
 
   @override

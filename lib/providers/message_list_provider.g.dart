@@ -19,9 +19,9 @@ final messageListProvider = MessageListFamily._();
 ///
 /// 生成されるプロバイダ名: messageListProvider
 
-final class MessageListProvider extends $FunctionalProvider<
-        AsyncValue<List<Message>>, List<Message>, FutureOr<List<Message>>>
-    with $FutureModifier<List<Message>>, $FutureProvider<List<Message>> {
+final class MessageListProvider
+    extends $FunctionalProvider<List<Message>, List<Message>, List<Message>>
+    with $Provider<List<Message>> {
   /// 指定した会話のメッセージ一覧を取得する Provider
   ///
   /// 生成されるプロバイダ名: messageListProvider
@@ -47,16 +47,23 @@ final class MessageListProvider extends $FunctionalProvider<
 
   @$internal
   @override
-  $FutureProviderElement<List<Message>> $createElement(
-          $ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+  $ProviderElement<List<Message>> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
 
   @override
-  FutureOr<List<Message>> create(Ref ref) {
+  List<Message> create(Ref ref) {
     final argument = this.argument as String;
     return messageList(
       ref,
       argument,
+    );
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(List<Message> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<List<Message>>(value),
     );
   }
 
@@ -71,14 +78,14 @@ final class MessageListProvider extends $FunctionalProvider<
   }
 }
 
-String _$messageListHash() => r'0e1fac984d7b0718c9464f95aa822000121861e4';
+String _$messageListHash() => r'b28147289a028084a99835ca996b5b0f26b41a3b';
 
 /// 指定した会話のメッセージ一覧を取得する Provider
 ///
 /// 生成されるプロバイダ名: messageListProvider
 
 final class MessageListFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<List<Message>>, String> {
+    with $FunctionalFamilyOverride<List<Message>, String> {
   MessageListFamily._()
       : super(
           retry: null,

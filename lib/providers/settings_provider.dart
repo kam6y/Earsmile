@@ -13,33 +13,31 @@ part 'settings_provider.g.dart';
 @riverpod
 class SettingsNotifier extends _$SettingsNotifier {
   @override
-  Future<AppSettings> build() async {
+  AppSettings build() {
     return ref.read(localStorageServiceProvider).loadSettings();
   }
 
   /// フォントサイズを変更して即座に保存する
   ///
   /// [scale]: 1.0(24pt) / 2.0(32pt) / 3.0(48pt)
-  Future<void> updateFontSize(double scale) async {
-    final current = state.value!;
+  void updateFontSize(double scale) {
     final updated = AppSettings(
-      id: current.id,
+      id: state.id,
       fontSize: scale,
-      isHighContrast: current.isHighContrast,
+      isHighContrast: state.isHighContrast,
     );
-    state = AsyncData(updated);
-    await ref.read(localStorageServiceProvider).saveSettings(updated);
+    state = updated;
+    ref.read(localStorageServiceProvider).saveSettings(updated);
   }
 
   /// 高コントラストモードを切り替えて即座に保存する
-  Future<void> toggleHighContrast(bool enabled) async {
-    final current = state.value!;
+  void toggleHighContrast(bool enabled) {
     final updated = AppSettings(
-      id: current.id,
-      fontSize: current.fontSize,
+      id: state.id,
+      fontSize: state.fontSize,
       isHighContrast: enabled,
     );
-    state = AsyncData(updated);
-    await ref.read(localStorageServiceProvider).saveSettings(updated);
+    state = updated;
+    ref.read(localStorageServiceProvider).saveSettings(updated);
   }
 }

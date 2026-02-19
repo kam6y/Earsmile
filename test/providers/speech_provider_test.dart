@@ -255,7 +255,7 @@ void main() {
 
       final state = container.read(speechProvider);
       expect(state.status, SpeechStatus.error);
-      expect(state.errorMessage, '認識エラー');
+      expect(state.errorMessage, '音声認識でエラーが発生しました。再度お試しください');
     });
   });
 

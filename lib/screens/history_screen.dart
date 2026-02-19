@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../config/constants.dart';
+import '../config/routes.dart';
 import '../config/theme.dart';
 import '../models/conversation.dart';
 import '../providers/conversation_list_provider.dart';
@@ -19,17 +20,8 @@ class HistoryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final conversationsAsync = ref.watch(conversationListProvider);
-
-    return conversationsAsync.when(
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, s) => Scaffold(
-        body: Center(child: Text('エラーが発生しました: $e')),
-      ),
-      data: (conversations) => _buildContent(context, ref, conversations),
-    );
+    final conversations = ref.watch(conversationListProvider);
+    return _buildContent(context, ref, conversations);
   }
 
   Widget _buildContent(
@@ -38,11 +30,8 @@ class HistoryScreen extends ConsumerWidget {
     List<Conversation> conversations,
   ) {
     final theme = Theme.of(context);
-    final settingsAsync = ref.watch(settingsProvider);
-    final fontSize = switch (settingsAsync) {
-      AsyncData(:final value) => resolveBodyFontSize(value.fontSize),
-      _ => resolveBodyFontSize(1.0),
-    };
+    final settings = ref.watch(settingsProvider);
+    final fontSize = resolveBodyFontSize(settings.fontSize);
 
     return Scaffold(
       appBar: AppBar(
@@ -83,8 +72,8 @@ class HistoryScreen extends ConsumerWidget {
                 return _ConversationListItem(
                   conversation: conversation,
                   fontSize: fontSize,
-                  onTap: () =>
-                      context.push('/history/${conversation.uuid}'),
+                  onTap: () => context
+                      .push(RoutePaths.historyDetailOf(conversation.uuid)),
                 );
               },
             ),

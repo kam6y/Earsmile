@@ -18,8 +18,8 @@ final conversationListProvider = ConversationListNotifierProvider._();
 /// 会話一覧の状態管理 Provider（履歴画面用）
 ///
 /// 生成されるプロバイダ名: conversationListProvider
-final class ConversationListNotifierProvider extends $AsyncNotifierProvider<
-    ConversationListNotifier, List<Conversation>> {
+final class ConversationListNotifierProvider
+    extends $NotifierProvider<ConversationListNotifier, List<Conversation>> {
   /// 会話一覧の状態管理 Provider（履歴画面用）
   ///
   /// 生成されるプロバイダ名: conversationListProvider
@@ -40,26 +40,33 @@ final class ConversationListNotifierProvider extends $AsyncNotifierProvider<
   @$internal
   @override
   ConversationListNotifier create() => ConversationListNotifier();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(List<Conversation> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<List<Conversation>>(value),
+    );
+  }
 }
 
 String _$conversationListNotifierHash() =>
-    r'fa07a4109d45dc5a25d7a7e7eb8a17ed2e6ac42d';
+    r'a0212335dd5558ab24066502d25d7f659518c968';
 
 /// 会話一覧の状態管理 Provider（履歴画面用）
 ///
 /// 生成されるプロバイダ名: conversationListProvider
 
 abstract class _$ConversationListNotifier
-    extends $AsyncNotifier<List<Conversation>> {
-  FutureOr<List<Conversation>> build();
+    extends $Notifier<List<Conversation>> {
+  List<Conversation> build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref =
-        this.ref as $Ref<AsyncValue<List<Conversation>>, List<Conversation>>;
+    final ref = this.ref as $Ref<List<Conversation>, List<Conversation>>;
     final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<List<Conversation>>, List<Conversation>>,
-        AsyncValue<List<Conversation>>,
+        AnyNotifier<List<Conversation>, List<Conversation>>,
+        List<Conversation>,
         Object?,
         Object?>;
     element.handleCreate(ref, build);

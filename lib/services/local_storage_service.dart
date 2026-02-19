@@ -28,13 +28,13 @@ class LocalStorageService {
   // -------------------------
 
   /// 設定を保存する（常に id=1 の1レコードのみ維持）
-  Future<void> saveSettings(AppSettings settings) async {
+  void saveSettings(AppSettings settings) {
     settings.id = 1;
     _settingsBox.put(settings);
   }
 
   /// 設定を読み込む（未保存の場合はデフォルト値を返す）
-  Future<AppSettings> loadSettings() async {
+  AppSettings loadSettings() {
     return _settingsBox.get(1) ?? AppSettings();
   }
 
@@ -43,12 +43,12 @@ class LocalStorageService {
   // -------------------------
 
   /// 会話を保存する（新規作成・更新ともに使用）
-  Future<void> saveConversation(Conversation conversation) async {
+  void saveConversation(Conversation conversation) {
     _conversationBox.put(conversation);
   }
 
   /// 全会話を開始日時の降順で返す
-  Future<List<Conversation>> getAllConversations() async {
+  List<Conversation> getAllConversations() {
     final query = _conversationBox
         .query()
         .order(Conversation_.startedAt, flags: Order.descending)
@@ -59,7 +59,7 @@ class LocalStorageService {
   }
 
   /// UUIDで指定した会話を削除する
-  Future<void> deleteConversation(String uuid) async {
+  void deleteConversation(String uuid) {
     final query = _conversationBox
         .query(Conversation_.uuid.equals(uuid))
         .build();
@@ -75,12 +75,12 @@ class LocalStorageService {
   // -------------------------
 
   /// メッセージを追加する
-  Future<void> addMessage(Message message) async {
+  void addMessage(Message message) {
     _messageBox.put(message);
   }
 
   /// 指定した会話のメッセージをタイムスタンプ昇順で返す
-  Future<List<Message>> getMessages(String conversationId) async {
+  List<Message> getMessages(String conversationId) {
     final query = _messageBox
         .query(Message_.conversationId.equals(conversationId))
         .order(Message_.timestamp)
@@ -91,7 +91,7 @@ class LocalStorageService {
   }
 
   /// 指定した会話のメッセージを全て削除する
-  Future<void> deleteMessages(String conversationId) async {
+  void deleteMessages(String conversationId) {
     final query = _messageBox
         .query(Message_.conversationId.equals(conversationId))
         .build();

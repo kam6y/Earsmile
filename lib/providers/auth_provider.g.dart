@@ -45,7 +45,7 @@ final class AuthNotifierProvider
   AuthNotifier create() => AuthNotifier();
 }
 
-String _$authNotifierHash() => r'1f6bc6bcffddaa31541df79ecfef0e838854fb64';
+String _$authNotifierHash() => r'247178e0cc38b2165bb3791df9b49b94d17e48bc';
 
 /// 認証状態を管理する Provider
 ///

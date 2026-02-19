@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
@@ -103,9 +104,10 @@ class SpeechNotifier extends _$SpeechNotifier {
         retryCount: 0,
       );
     } catch (e) {
+      debugPrint('SpeechNotifier.startListening error: $e');
       state = state.copyWith(
         status: SpeechStatus.error,
-        errorMessage: e.toString(),
+        errorMessage: '音声認識の開始に失敗しました',
       );
     }
   }
@@ -115,7 +117,9 @@ class SpeechNotifier extends _$SpeechNotifier {
     final speechService = ref.read(speechServiceProvider);
     try {
       await speechService.stopListening();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('SpeechNotifier.pause error: $e');
+    }
     _eventSubscription?.cancel();
     state = state.copyWith(status: SpeechStatus.paused);
   }
@@ -131,7 +135,9 @@ class SpeechNotifier extends _$SpeechNotifier {
     try {
       final speechService = ref.read(speechServiceProvider);
       await speechService.stopListening();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('SpeechNotifier.stop error: $e');
+    }
     // async 待機後に Provider が破棄されている場合があるため確認
     if (!ref.mounted) return;
     state = state.copyWith(status: SpeechStatus.idle);
@@ -183,12 +189,13 @@ class SpeechNotifier extends _$SpeechNotifier {
 
   /// エラー発生時の自動リトライ処理
   void _handleError(String code, String message) {
+    debugPrint('SpeechNotifier._handleError: code=$code, message=$message');
     final newRetryCount = state.retryCount + 1;
 
     if (newRetryCount >= AppConstants.maxRetryCount) {
       state = state.copyWith(
         status: SpeechStatus.error,
-        errorMessage: message,
+        errorMessage: '音声認識でエラーが発生しました。再度お試しください',
         retryCount: 0,
       );
       _eventSubscription?.cancel();

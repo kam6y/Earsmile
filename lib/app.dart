@@ -10,11 +10,8 @@ class App extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final settingsAsync = ref.watch(settingsProvider);
-    final isHighContrast = switch (settingsAsync) {
-      AsyncData(:final value) => value.isHighContrast,
-      _ => false,
-    };
+    final settings = ref.watch(settingsProvider);
+    final isHighContrast = settings.isHighContrast;
     return MaterialApp.router(
       title: 'earsmile',
       theme: isHighContrast ? highContrastTheme : normalTheme,

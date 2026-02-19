@@ -44,16 +44,9 @@ class _TranscriptViewState extends ConsumerState<TranscriptView> {
   @override
   Widget build(BuildContext context) {
     final speechState = ref.watch(speechProvider);
-    final settingsAsync = ref.watch(settingsProvider);
-
-    final fontSize = switch (settingsAsync) {
-      AsyncData(:final value) => resolveBodyFontSize(value.fontSize),
-      _ => 24.0,
-    };
-    final isHighContrast = switch (settingsAsync) {
-      AsyncData(:final value) => value.isHighContrast,
-      _ => false,
-    };
+    final settings = ref.watch(settingsProvider);
+    final fontSize = resolveBodyFontSize(settings.fontSize);
+    final isHighContrast = settings.isHighContrast;
 
     final theme = Theme.of(context);
     final confirmedMessages = speechState.confirmedMessages;

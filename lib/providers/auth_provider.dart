@@ -1,8 +1,16 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../services/auth_service.dart';
 
 part 'auth_provider.g.dart';
+
+/// AuthService の Provider（override 必須パターン）
+final authServiceProvider = Provider<AuthService>((ref) {
+  throw UnimplementedError(
+    'authServiceProvider を ProviderScope で override してください',
+  );
+});
 
 /// 認証状態を管理する Provider
 ///
@@ -10,14 +18,13 @@ part 'auth_provider.g.dart';
 /// オフラインファースト: 認証失敗時も AsyncData(null) として正常完了扱い。
 @riverpod
 class AuthNotifier extends _$AuthNotifier {
-  late final AuthService _authService;
-
   @override
   Future<String?> build() async {
-    _authService = AuthService();
-    return _authService.ensureAuthenticated();
+    final authService = ref.read(authServiceProvider);
+    return authService.ensureAuthenticated();
   }
 
   /// 現在の UID を同期的に取得する
-  String? get currentUserId => _authService.currentUserId;
+  String? get currentUserId =>
+      ref.read(authServiceProvider).currentUserId;
 }
