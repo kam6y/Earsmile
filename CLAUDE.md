@@ -81,10 +81,10 @@ final value = switch (asyncValue) {
 | Step 2 | データモデル・ObjectBox ストレージ | ✅ 完了 |
 | Step 3 | テーマ・UI基盤・共通 Widget | ✅ 完了 |
 | Step 4 | 設定機能（SettingsProvider・Settings Screen） | ✅ 完了 |
-| Step 5 | Firebase 匿名認証・Splash Screen | ⏳ 未実装 |
-| Step 6 | 音声認識（SFSpeechRecognizer・Platform Channel） | ⏳ 未実装 |
-| Step 7 | Home Screen（リアルタイム文字起こし表示） | ⏳ 未実装 |
-| Step 8 | 履歴機能（History Screen・削除） | ⏳ 未実装 |
+| Step 5 | Firebase 匿名認証・Splash Screen | ✅ 完了 |
+| Step 6 | 音声認識（SFSpeechRecognizer・Platform Channel） | ✅ 完了 |
+| Step 7 | Home Screen（リアルタイム文字起こし表示） | ✅ 完了 |
+| Step 8 | 履歴機能（History Screen・削除） | ✅ 完了 |
 | Step 9 | 結合テスト・品質確認 | ⏳ 未実装 |
 
 ## Documentation
