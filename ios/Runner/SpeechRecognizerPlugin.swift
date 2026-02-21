@@ -5,7 +5,7 @@ import Speech
 /// Flutter Platform Channel を通じて SFSpeechRecognizer を制御するプラグイン
 ///
 /// MethodChannel: com.app.speech/recognizer
-///   - startListening / stopListening / requestPermission / checkPermission
+///   - startListening / stopListening / requestPermission / checkPermission / checkOnDeviceSupport
 ///
 /// EventChannel: com.app.speech/recognizer_events
 ///   - onPartialResult / onFinalResult / onError / onSilenceDetected
@@ -33,6 +33,7 @@ class SpeechRecognizerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
     // 認識中フラグ（セッション自動再起動の制御用）
     private var isListening = false
     private var hasInstalledTap = false
+    private var useOnDeviceRecognition = false
 
     // MARK: - 初期化
 
@@ -64,6 +65,8 @@ class SpeechRecognizerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
     func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "startListening":
+            let mode = (call.arguments as? [String: Any])?["mode"] as? String
+            useOnDeviceRecognition = (mode == "onDevice")
             startListening(result: result)
         case "stopListening":
             stopListening(result: result)
@@ -71,6 +74,8 @@ class SpeechRecognizerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
             requestPermission(result: result)
         case "checkPermission":
             checkPermission(result: result)
+        case "checkOnDeviceSupport":
+            checkOnDeviceSupport(result: result)
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -117,6 +122,19 @@ class SpeechRecognizerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
         }
     }
 
+    private func checkOnDeviceSupport(result: @escaping FlutterResult) {
+        guard let recognizer = speechRecognizer else {
+            result(false)
+            return
+        }
+
+        if #available(iOS 13.0, *) {
+            result(recognizer.supportsOnDeviceRecognition)
+        } else {
+            result(false)
+        }
+    }
+
     // MARK: - 音声認識制御
 
     private func startListening(result: @escaping FlutterResult) {
@@ -142,7 +160,9 @@ class SpeechRecognizerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
             return
         }
 
-        if #available(iOS 13.0, *), !recognizer.supportsOnDeviceRecognition {
+        if useOnDeviceRecognition,
+           #available(iOS 13.0, *),
+           !recognizer.supportsOnDeviceRecognition {
             let message = "この端末ではオンデバイス音声認識を利用できません"
             sendError(code: "ON_DEVICE_NOT_SUPPORTED", message: message)
             result(FlutterError(code: "ON_DEVICE_NOT_SUPPORTED", message: message, details: nil))
@@ -242,7 +262,7 @@ class SpeechRecognizerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
 
         recognitionRequest.shouldReportPartialResults = true
         if #available(iOS 13.0, *) {
-            recognitionRequest.requiresOnDeviceRecognition = true
+            recognitionRequest.requiresOnDeviceRecognition = useOnDeviceRecognition
         }
         return true
     }

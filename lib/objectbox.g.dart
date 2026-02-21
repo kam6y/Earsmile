@@ -24,7 +24,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(1, 7850056176677781307),
     name: 'AppSettings',
-    lastPropertyId: const obx_int.IdUid(3, 4967370486353035027),
+    lastPropertyId: const obx_int.IdUid(4, 8722891438549959707),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -43,6 +43,12 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(3, 4967370486353035027),
         name: 'isHighContrast',
         type: 1,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 8722891438549959707),
+        name: 'speechRecognitionModeRaw',
+        type: 9,
         flags: 0,
       ),
     ],
@@ -226,10 +232,14 @@ obx_int.ModelDefinition getObjectBoxModel() {
         object.id = id;
       },
       objectToFB: (AppSettings object, fb.Builder fbb) {
-        fbb.startTable(4);
+        final speechRecognitionModeRawOffset = fbb.writeString(
+          object.speechRecognitionModeRaw,
+        );
+        fbb.startTable(5);
         fbb.addInt64(0, object.id);
         fbb.addFloat64(1, object.fontSize);
         fbb.addBool(2, object.isHighContrast);
+        fbb.addOffset(3, speechRecognitionModeRawOffset);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -254,10 +264,14 @@ obx_int.ModelDefinition getObjectBoxModel() {
           8,
           false,
         );
+        final speechRecognitionModeRawParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 10, '');
         final object = AppSettings(
           id: idParam,
           fontSize: fontSizeParam,
           isHighContrast: isHighContrastParam,
+          speechRecognitionModeRaw: speechRecognitionModeRawParam,
         );
 
         return object;
@@ -425,6 +439,11 @@ class AppSettings_ {
   /// See [AppSettings.isHighContrast].
   static final isHighContrast = obx.QueryBooleanProperty<AppSettings>(
     _entities[0].properties[2],
+  );
+
+  /// See [AppSettings.speechRecognitionModeRaw].
+  static final speechRecognitionModeRaw = obx.QueryStringProperty<AppSettings>(
+    _entities[0].properties[3],
   );
 }
 

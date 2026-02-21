@@ -1,25 +1,32 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:earsmile/models/speech_recognition_mode.dart';
 import 'package:earsmile/services/speech_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late SpeechService speechService;
+  Map<dynamic, dynamic>? lastStartListeningArguments;
 
   setUp(() {
     speechService = SpeechService();
+    lastStartListeningArguments = null;
 
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
       const MethodChannel('com.app.speech/recognizer'),
       (MethodCall call) async {
         switch (call.method) {
+          case 'checkOnDeviceSupport':
+            return false;
           case 'checkPermission':
             return 'granted';
           case 'requestPermission':
             return true;
           case 'startListening':
+            lastStartListeningArguments =
+                call.arguments as Map<dynamic, dynamic>?;
             return null;
           case 'stopListening':
             return null;
@@ -49,8 +56,21 @@ void main() {
       expect(result, true);
     });
 
-    test('startListening は例外なく完了する', () async {
+    test('checkOnDeviceSupport は bool を返す', () async {
+      final result = await speechService.checkOnDeviceSupport();
+      expect(result, false);
+    });
+
+    test('startListening はデフォルトで server モードを渡す', () async {
       await expectLater(speechService.startListening(), completes);
+      expect(lastStartListeningArguments?['mode'], equals('server'));
+    });
+
+    test('startListening はモードを渡しても例外なく完了する', () async {
+      await expectLater(
+        speechService.startListening(SpeechRecognitionMode.onDevice),
+        completes,
+      );
     });
 
     test('stopListening は例外なく完了する', () async {

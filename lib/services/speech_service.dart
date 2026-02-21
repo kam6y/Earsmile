@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 
+import '../models/speech_recognition_mode.dart';
+
 /// 音声認識イベントの種別
 enum SpeechEventType {
   partialResult,
@@ -84,9 +86,24 @@ class SpeechService {
   final MethodChannel _methodChannel;
   final EventChannel _eventChannel;
 
+  /// この端末でオンデバイス音声認識が使用可能かを確認する
+  ///
+  /// iOS 13+ 未満または非対応端末では false を返す。
+  Future<bool> checkOnDeviceSupport() async {
+    final result =
+        await _methodChannel.invokeMethod<bool>('checkOnDeviceSupport');
+    return result ?? false;
+  }
+
   /// 音声認識を開始する
-  Future<void> startListening() async {
-    await _methodChannel.invokeMethod<void>('startListening');
+  ///
+  /// [mode]: 認識モード（省略時は SpeechRecognitionMode.server）
+  Future<void> startListening(
+      [SpeechRecognitionMode mode = SpeechRecognitionMode.server]) async {
+    await _methodChannel.invokeMethod<void>(
+      'startListening',
+      {'mode': mode.toStorageString()},
+    );
   }
 
   /// 音声認識を停止する

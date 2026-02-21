@@ -27,15 +27,28 @@ class LocalStorageService {
   // 設定 (AppSettings)
   // -------------------------
 
-  /// 設定を保存する（常に id=1 の1レコードのみ維持）
+  /// 設定を保存する（単一レコード運用）
+  ///
+  /// 初回は id=0 で挿入し、2回目以降は既存レコードの ID で上書きする。
   void saveSettings(AppSettings settings) {
-    settings.id = 1;
+    final existing = _findSettingsRecord();
+    settings.id = existing?.id ?? 0;
     _settingsBox.put(settings);
   }
 
   /// 設定を読み込む（未保存の場合はデフォルト値を返す）
   AppSettings loadSettings() {
-    return _settingsBox.get(1) ?? AppSettings();
+    return _findSettingsRecord() ?? AppSettings();
+  }
+
+  /// 設定レコードを1件取得する（通常は id=1、なければ先頭レコード）
+  AppSettings? _findSettingsRecord() {
+    final byFixedId = _settingsBox.get(1);
+    if (byFixedId != null) return byFixedId;
+
+    final all = _settingsBox.getAll();
+    if (all.isEmpty) return null;
+    return all.first;
   }
 
   // -------------------------

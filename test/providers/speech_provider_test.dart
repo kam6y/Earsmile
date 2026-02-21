@@ -4,11 +4,15 @@ import 'package:earsmile/config/constants.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:earsmile/models/app_settings.dart';
 import 'package:earsmile/providers/speech_provider.dart';
 import 'package:earsmile/providers/local_storage_provider.dart';
+import 'package:earsmile/providers/settings_provider.dart';
+import 'package:earsmile/models/speech_recognition_mode.dart';
 import 'package:earsmile/services/speech_service.dart';
 import 'package:earsmile/services/local_storage_service.dart';
 import 'package:earsmile/models/message.dart';
+import '../helpers/mocks.dart' show FakeSettingsNotifier;
 
 /// テスト用の SpeechService モック
 ///
@@ -24,7 +28,11 @@ class MockSpeechService extends SpeechService {
   MockSpeechService() : super();
 
   @override
-  Future<void> startListening() async {
+  Future<bool> checkOnDeviceSupport() async => false;
+
+  @override
+  Future<void> startListening(
+      [SpeechRecognitionMode mode = SpeechRecognitionMode.server]) async {
     if (startListeningError != null) {
       throw startListeningError!;
     }
@@ -73,6 +81,9 @@ void main() {
       overrides: [
         speechServiceProvider.overrideWithValue(mockSpeechService),
         localStorageServiceProvider.overrideWithValue(mockLocalStorageService),
+        settingsProvider.overrideWith(
+          () => FakeSettingsNotifier(AppSettings()),
+        ),
       ],
     );
   });
@@ -248,6 +259,27 @@ void main() {
 
       final state = container.read(speechProvider);
       expect(state.confirmedMessages, isEmpty);
+    });
+
+    test('ON_DEVICE_NOT_SUPPORTED エラーはリトライせず即時 error 状態になる',
+        () async {
+      final notifier = container.read(speechProvider.notifier);
+      notifier.setConversationId('test-conversation-id');
+      await notifier.startListening();
+
+      mockSpeechService.emitEvent(const SpeechEvent(
+        type: SpeechEventType.error,
+        errorCode: 'ON_DEVICE_NOT_SUPPORTED',
+        errorMessage: 'この端末はオンデバイス認識に非対応です',
+      ));
+
+      final state = container.read(speechProvider);
+      expect(state.status, SpeechStatus.error);
+      expect(state.retryCount, 0);
+      expect(
+        state.errorMessage,
+        'この端末はオンデバイス認識に非対応です。設定でサーバーサイドに変更してください',
+      );
     });
 
     test('エラー3回で status が error に遷移する', () async {

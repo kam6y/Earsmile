@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:earsmile/models/app_settings.dart';
 import 'package:earsmile/models/conversation.dart';
 import 'package:earsmile/models/message.dart';
+import 'package:earsmile/models/speech_recognition_mode.dart';
 
 void main() {
   group('AppSettings', () {
@@ -10,6 +11,9 @@ void main() {
       expect(settings.id, equals(0));
       expect(settings.fontSize, equals(1.0));
       expect(settings.isHighContrast, isFalse);
+      expect(settings.speechRecognitionModeRaw, equals('server'));
+      expect(
+          settings.speechRecognitionMode, equals(SpeechRecognitionMode.server));
     });
 
     test('指定値で生成できる', () {
@@ -30,6 +34,39 @@ void main() {
       expect(small.fontSize, equals(1.0));
       expect(medium.fontSize, equals(2.0));
       expect(large.fontSize, equals(3.0));
+    });
+  });
+
+  group('SpeechRecognitionMode', () {
+    test('デフォルトは server', () {
+      final settings = AppSettings();
+      expect(settings.speechRecognitionModeRaw, equals('server'));
+      expect(
+          settings.speechRecognitionMode, equals(SpeechRecognitionMode.server));
+    });
+
+    test('onDevice を設定できる', () {
+      final settings = AppSettings(speechRecognitionModeRaw: 'onDevice');
+      expect(
+          settings.speechRecognitionMode, equals(SpeechRecognitionMode.onDevice));
+    });
+
+    test('不明な値は server にフォールバックする', () {
+      final settings = AppSettings(speechRecognitionModeRaw: 'unknown');
+      expect(
+          settings.speechRecognitionMode, equals(SpeechRecognitionMode.server));
+    });
+
+    test('toStorageString は enum の name を返す', () {
+      expect(SpeechRecognitionMode.server.toStorageString(), equals('server'));
+      expect(
+          SpeechRecognitionMode.onDevice.toStorageString(), equals('onDevice'));
+    });
+
+    test('speechRecognitionMode setter で変換できる', () {
+      final settings = AppSettings();
+      settings.speechRecognitionMode = SpeechRecognitionMode.onDevice;
+      expect(settings.speechRecognitionModeRaw, equals('onDevice'));
     });
   });
 

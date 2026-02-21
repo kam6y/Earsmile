@@ -13,6 +13,7 @@ part of 'settings_provider.dart';
 /// - build(): ObjectBox から設定を読み込んで初期状態を返す
 /// - updateFontSize(): フォントサイズ変更 → ObjectBox 保存
 /// - toggleHighContrast(): コントラスト切替 → ObjectBox 保存
+/// - updateSpeechMode(): 音声認識モード変更 → ObjectBox 保存
 
 @ProviderFor(SettingsNotifier)
 final settingsProvider = SettingsNotifierProvider._();
@@ -22,6 +23,7 @@ final settingsProvider = SettingsNotifierProvider._();
 /// - build(): ObjectBox から設定を読み込んで初期状態を返す
 /// - updateFontSize(): フォントサイズ変更 → ObjectBox 保存
 /// - toggleHighContrast(): コントラスト切替 → ObjectBox 保存
+/// - updateSpeechMode(): 音声認識モード変更 → ObjectBox 保存
 final class SettingsNotifierProvider
     extends $NotifierProvider<SettingsNotifier, AppSettings> {
   /// アプリ設定の状態管理 Provider
@@ -29,6 +31,7 @@ final class SettingsNotifierProvider
   /// - build(): ObjectBox から設定を読み込んで初期状態を返す
   /// - updateFontSize(): フォントサイズ変更 → ObjectBox 保存
   /// - toggleHighContrast(): コントラスト切替 → ObjectBox 保存
+  /// - updateSpeechMode(): 音声認識モード変更 → ObjectBox 保存
   SettingsNotifierProvider._()
       : super(
           from: null,
@@ -56,13 +59,14 @@ final class SettingsNotifierProvider
   }
 }
 
-String _$settingsNotifierHash() => r'7a311132e25d4deab4eb8de573078e4cad5f5c8c';
+String _$settingsNotifierHash() => r'f6109e94edd13733e54e78047b6a37217ef95bdd';
 
 /// アプリ設定の状態管理 Provider
 ///
 /// - build(): ObjectBox から設定を読み込んで初期状態を返す
 /// - updateFontSize(): フォントサイズ変更 → ObjectBox 保存
 /// - toggleHighContrast(): コントラスト切替 → ObjectBox 保存
+/// - updateSpeechMode(): 音声認識モード変更 → ObjectBox 保存
 
 abstract class _$SettingsNotifier extends $Notifier<AppSettings> {
   AppSettings build();

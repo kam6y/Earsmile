@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:earsmile/models/app_settings.dart';
 import 'package:earsmile/models/conversation.dart';
 import 'package:earsmile/models/message.dart';
+import 'package:earsmile/models/speech_recognition_mode.dart';
 import 'package:earsmile/providers/conversation_list_provider.dart';
 import 'package:earsmile/providers/settings_provider.dart';
 import 'package:earsmile/services/local_storage_service.dart';
@@ -18,11 +19,16 @@ class MockSpeechService extends SpeechService {
   int stopCallCount = 0;
   bool shouldThrowOnStart = false;
   String permissionStatus = 'granted';
+  bool supportsOnDevice = false;
 
   MockSpeechService() : super();
 
   @override
-  Future<void> startListening() async {
+  Future<bool> checkOnDeviceSupport() async => supportsOnDevice;
+
+  @override
+  Future<void> startListening(
+      [SpeechRecognitionMode mode = SpeechRecognitionMode.server]) async {
     if (shouldThrowOnStart) {
       throw Exception('Start failed');
     }

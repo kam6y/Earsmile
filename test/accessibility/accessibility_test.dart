@@ -9,6 +9,7 @@ import 'package:earsmile/models/conversation.dart';
 import 'package:earsmile/models/message.dart';
 import 'package:earsmile/providers/connectivity_provider.dart';
 import 'package:earsmile/providers/conversation_list_provider.dart';
+import 'package:earsmile/providers/device_capability_provider.dart';
 import 'package:earsmile/providers/local_storage_provider.dart';
 import 'package:earsmile/providers/message_list_provider.dart';
 import 'package:earsmile/providers/settings_provider.dart';
@@ -58,8 +59,10 @@ void main() {
     return ProviderScope(
       overrides: [
         localStorageServiceProvider.overrideWithValue(mockStorage),
-        settingsProvider
-            .overrideWith(() => FakeSettingsNotifier(settings)),
+        settingsProvider.overrideWith(() => FakeSettingsNotifier(settings)),
+        deviceCapabilityProvider.overrideWith(
+          () => _FakeDeviceCapabilityNotifier(false),
+        ),
       ],
       child: const MaterialApp(home: SettingsScreen()),
     );
@@ -352,4 +355,13 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+}
+
+class _FakeDeviceCapabilityNotifier extends DeviceCapabilityNotifier {
+  final bool _value;
+
+  _FakeDeviceCapabilityNotifier(this._value);
+
+  @override
+  Future<bool> build() async => _value;
 }

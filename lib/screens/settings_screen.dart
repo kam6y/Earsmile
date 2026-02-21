@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../config/theme.dart';
 import '../models/app_settings.dart';
+import '../models/speech_recognition_mode.dart';
+import '../providers/device_capability_provider.dart';
 import '../providers/settings_provider.dart';
 import '../utils/accessibility_helpers.dart';
 
@@ -65,6 +67,10 @@ class SettingsScreen extends ConsumerWidget {
             const Divider(thickness: 1),
             const SizedBox(height: 8),
             _buildContrastSection(context, ref, settings, theme, isHighContrast),
+            const SizedBox(height: 8),
+            const Divider(thickness: 1),
+            const SizedBox(height: 8),
+            _buildSpeechModeSection(context, ref, settings, theme),
             const SizedBox(height: 32),
           ],
         ),
@@ -205,6 +211,71 @@ class SettingsScreen extends ConsumerWidget {
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // -------------------------
+  // 音声認識の方法セクション
+  // -------------------------
+
+  Widget _buildSpeechModeSection(
+    BuildContext context,
+    WidgetRef ref,
+    AppSettings settings,
+    ThemeData theme,
+  ) {
+    final capabilityAsync = ref.watch(deviceCapabilityProvider);
+    final supportsOnDevice = switch (capabilityAsync) {
+      AsyncData(:final value) => value,
+      _ => false,
+    };
+
+    final labelStyle = theme.textTheme.bodyLarge?.copyWith(
+      fontSize: 18,
+      fontWeight: FontWeight.bold,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('音声認識の方法', style: labelStyle),
+        const SizedBox(height: 8),
+        RadioGroup<SpeechRecognitionMode>(
+          groupValue: settings.speechRecognitionMode,
+          onChanged: (value) {
+            if (value != null) {
+              ref.read(settingsProvider.notifier).updateSpeechMode(value);
+            }
+          },
+          child: Column(
+            children: [
+              Semantics(
+                label: 'サーバーで認識（通常）',
+                child: RadioListTile<SpeechRecognitionMode>(
+                  title: Text(
+                    'サーバーで認識（通常）',
+                    style: theme.textTheme.bodyLarge?.copyWith(fontSize: 20),
+                  ),
+                  value: SpeechRecognitionMode.server,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              if (supportsOnDevice)
+                Semantics(
+                  label: '端末のみで認識（オフライン）',
+                  child: RadioListTile<SpeechRecognitionMode>(
+                    title: Text(
+                      '端末のみで認識（オフライン）',
+                      style: theme.textTheme.bodyLarge?.copyWith(fontSize: 20),
+                    ),
+                    value: SpeechRecognitionMode.onDevice,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
             ],
           ),
         ),

@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../models/app_settings.dart';
+import '../models/speech_recognition_mode.dart';
 import 'local_storage_provider.dart';
 
 part 'settings_provider.g.dart';
@@ -10,6 +11,7 @@ part 'settings_provider.g.dart';
 /// - build(): ObjectBox から設定を読み込んで初期状態を返す
 /// - updateFontSize(): フォントサイズ変更 → ObjectBox 保存
 /// - toggleHighContrast(): コントラスト切替 → ObjectBox 保存
+/// - updateSpeechMode(): 音声認識モード変更 → ObjectBox 保存
 @riverpod
 class SettingsNotifier extends _$SettingsNotifier {
   @override
@@ -25,6 +27,7 @@ class SettingsNotifier extends _$SettingsNotifier {
       id: state.id,
       fontSize: scale,
       isHighContrast: state.isHighContrast,
+      speechRecognitionModeRaw: state.speechRecognitionModeRaw,
     );
     state = updated;
     ref.read(localStorageServiceProvider).saveSettings(updated);
@@ -36,6 +39,19 @@ class SettingsNotifier extends _$SettingsNotifier {
       id: state.id,
       fontSize: state.fontSize,
       isHighContrast: enabled,
+      speechRecognitionModeRaw: state.speechRecognitionModeRaw,
+    );
+    state = updated;
+    ref.read(localStorageServiceProvider).saveSettings(updated);
+  }
+
+  /// 音声認識モードを変更して即座に保存する
+  void updateSpeechMode(SpeechRecognitionMode mode) {
+    final updated = AppSettings(
+      id: state.id,
+      fontSize: state.fontSize,
+      isHighContrast: state.isHighContrast,
+      speechRecognitionModeRaw: mode.toStorageString(),
     );
     state = updated;
     ref.read(localStorageServiceProvider).saveSettings(updated);

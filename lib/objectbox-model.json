@@ -5,7 +5,7 @@
   "entities": [
     {
       "id": "1:7850056176677781307",
-      "lastPropertyId": "3:4967370486353035027",
+      "lastPropertyId": "4:8722891438549959707",
       "name": "AppSettings",
       "properties": [
         {
@@ -23,6 +23,11 @@
           "id": "3:4967370486353035027",
           "name": "isHighContrast",
           "type": 1
+        },
+        {
+          "id": "4:8722891438549959707",
+          "name": "speechRecognitionModeRaw",
+          "type": 9
         }
       ],
       "relations": []

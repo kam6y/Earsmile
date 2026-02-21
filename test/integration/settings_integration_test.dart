@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:earsmile/models/app_settings.dart';
+import 'package:earsmile/providers/device_capability_provider.dart';
 import 'package:earsmile/providers/local_storage_provider.dart';
 import 'package:earsmile/providers/settings_provider.dart';
 import 'package:earsmile/screens/settings_screen.dart';
@@ -17,12 +18,18 @@ void main() {
   });
 
   group('設定画面 結合テスト', () {
-    Widget buildSettingsScreen({AppSettings? initialSettings}) {
+    Widget buildSettingsScreen({
+      AppSettings? initialSettings,
+      bool supportsOnDevice = false,
+    }) {
       return ProviderScope(
         overrides: [
           localStorageServiceProvider.overrideWithValue(mockStorage),
           settingsProvider.overrideWith(
             () => FakeSettingsNotifier(initialSettings),
+          ),
+          deviceCapabilityProvider.overrideWith(
+            () => _FakeDeviceCapabilityNotifier(supportsOnDevice),
           ),
         ],
         child: const MaterialApp(home: SettingsScreen()),
@@ -97,5 +104,33 @@ void main() {
       expect(find.text('せってい'), findsOneWidget);
       expect(find.text('この大きさで\n表示されます'), findsOneWidget);
     });
+
+    testWidgets('オンデバイス非対応の場合、サーバー認識のみ表示されオンデバイス選択肢は表示されない',
+        (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(supportsOnDevice: false));
+      await tester.pumpAndSettle();
+
+      expect(find.text('音声認識の方法'), findsOneWidget);
+      expect(find.text('サーバーで認識（通常）'), findsOneWidget);
+      expect(find.text('端末のみで認識（オフライン）'), findsNothing);
+    });
+
+    testWidgets('オンデバイス対応の場合、音声認識セクションが表示される', (tester) async {
+      await tester.pumpWidget(buildSettingsScreen(supportsOnDevice: true));
+      await tester.pumpAndSettle();
+
+      expect(find.text('音声認識の方法'), findsOneWidget);
+      expect(find.text('サーバーで認識（通常）'), findsOneWidget);
+      expect(find.text('端末のみで認識（オフライン）'), findsOneWidget);
+    });
   });
+}
+
+class _FakeDeviceCapabilityNotifier extends DeviceCapabilityNotifier {
+  final bool _value;
+
+  _FakeDeviceCapabilityNotifier(this._value);
+
+  @override
+  Future<bool> build() async => _value;
 }

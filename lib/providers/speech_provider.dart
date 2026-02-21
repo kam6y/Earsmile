@@ -7,9 +7,11 @@ import 'package:uuid/uuid.dart';
 
 import '../config/constants.dart';
 import '../models/message.dart';
+import '../models/speech_recognition_mode.dart';
 import '../services/speech_service.dart';
 import '../utils/app_logger.dart';
 import 'local_storage_provider.dart';
+import 'settings_provider.dart';
 
 part 'speech_provider.g.dart';
 
@@ -103,12 +105,24 @@ class SpeechNotifier extends _$SpeechNotifier {
     if (_currentConversationId == null) return;
 
     final speechService = ref.read(speechServiceProvider);
-
-    _eventSubscription?.cancel();
-    _eventSubscription = speechService.eventStream.listen(_handleEvent);
+    var mode = ref.read(settingsProvider).speechRecognitionMode;
 
     try {
-      await speechService.startListening();
+      // onDevice 設定だが非対応端末の場合はサーバーサイドにフォールバックして保存
+      if (mode == SpeechRecognitionMode.onDevice) {
+        final supported = await speechService.checkOnDeviceSupport();
+        if (!supported) {
+          mode = SpeechRecognitionMode.server;
+          ref
+              .read(settingsProvider.notifier)
+              .updateSpeechMode(SpeechRecognitionMode.server);
+        }
+      }
+
+      _eventSubscription?.cancel();
+      _eventSubscription = speechService.eventStream.listen(_handleEvent);
+
+      await speechService.startListening(mode);
       state = state.copyWith(
         status: SpeechStatus.listening,
         errorMessage: null,
@@ -223,6 +237,18 @@ class SpeechNotifier extends _$SpeechNotifier {
   /// エラー発生時の自動リトライ処理
   void _handleError(String code, String _) {
     AppLogger.warn('SpeechNotifier._handleError: code=$code');
+
+    // オンデバイス非対応エラーはリトライしない
+    if (code == 'ON_DEVICE_NOT_SUPPORTED') {
+      state = state.copyWith(
+        status: SpeechStatus.error,
+        errorMessage: 'この端末はオンデバイス認識に非対応です。設定でサーバーサイドに変更してください',
+        retryCount: 0,
+      );
+      _eventSubscription?.cancel();
+      return;
+    }
+
     final newRetryCount = state.retryCount + 1;
 
     if (newRetryCount >= AppConstants.maxRetryCount) {
